@@ -2,8 +2,8 @@ name: Scheduled Performance Measurement
 
 on:
   schedule:
-    # 매일 한국시간 오전 9시 (UTC 00:00)
-    - cron: '0 0 * * *'
+    # 매일 한국시간 새벽 1시 (UTC 16:00)
+    - cron: '0 16 * * *'
   
   # 수동 실행 가능
   workflow_dispatch:
