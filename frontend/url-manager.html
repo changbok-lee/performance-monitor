@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL 관리 - 성능 모니터링</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚙️ URL 관리</h1>
+      <nav>
+        <a href="index.html">📊 대시보드</a>
+        <a href="url-manager.html" class="active">⚙️ URL 관리</a>
+      </nav>
+    </header>
+
+    <main>
+      <!-- 엑셀 복붙 영역 -->
+      <section class="paste-section">
+        <h2>📝 엑셀에서 복사-붙여넣기</h2>
+        <p class="help-text">
+          엑셀에서 URL, 사이트명, 페이지상세, 네트워크 열을 복사해서 아래에 붙여넣으세요.
+        </p>
+        
+        <textarea 
+          id="pasteArea" 
+          placeholder="엑셀에서 복사한 내용을 여기에 붙여넣으세요 (Ctrl+V)&#10;&#10;예시:&#10;https://example.com	사이트A	메인페이지	Mobile&#10;https://example.com	사이트A	메인페이지	Desktop"
+          rows="10"
+        ></textarea>
+
+        <div class="button-group">
+          <button onclick="parseExcelData()" class="btn btn-primary">
+            ✅ 데이터 검증
+          </button>
+          <button onclick="clearPasteArea()" class="btn btn-secondary">
+            🗑️ 지우기
+          </button>
+        </div>
+
+        <!-- 검증 결과 -->
+        <div id="validationResult" class="validation-result" style="display:none;">
+          <h3>검증 결과</h3>
+          <div id="validationSummary"></div>
+          <div id="validationDetails"></div>
+          <button onclick="saveUrls()" class="btn btn-success">
+            💾 저장하기
+          </button>
+        </div>
+      </section>
+
+      <!-- 현재 등록된 URL 목록 -->
+      <section class="url-list-section">
+        <div class="section-header">
+          <h2>📋 등록된 URL (<span id="urlCount">0</span>개)</h2>
+          <div class="button-group">
+            <button onclick="loadUrls()" class="btn btn-secondary">
+              🔄 새로고침
+            </button>
+            <button onclick="deleteAllUrls()" class="btn btn-danger">
+              🗑️ 전체 삭제
+            </button>
+          </div>
+        </div>
+
+        <div class="search-bar">
+          <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="URL 또는 사이트명 검색..."
+            onkeyup="filterUrls()"
+          >
+        </div>
+
+        <div class="table-container">
+          <table id="urlTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>URL</th>
+                <th>사이트명</th>
+                <th>페이지상세</th>
+                <th>네트워크</th>
+                <th>등록일</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody id="urlTableBody">
+              <tr>
+                <td colspan="7" style="text-align:center;">
+                  데이터를 불러오는 중...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/url-manager.js"></script>
+</body>
+</html>

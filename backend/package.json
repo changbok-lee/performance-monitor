@@ -1,0 +1,27 @@
+{
+  "name": "performance-monitor-backend",
+  "version": "1.0.0",
+  "description": "웹사이트 성능 측정 자동화 시스템",
+  "main": "src/api.js",
+  "scripts": {
+    "start": "node src/api.js",
+    "measure": "node run-measurement.js",
+    "test": "node test-pagespeed.js",
+    "test-db": "node test-db.js"
+  },
+  "keywords": [
+    "performance",
+    "monitoring",
+    "pagespeed"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "node-cron": "^3.0.3",
+    "sqlite3": "^5.1.7"
+  }
+}
