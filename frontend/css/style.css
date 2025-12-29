@@ -1577,10 +1577,12 @@ nav {
   color: #333;
 }
 
+/* 네트워크 정보 텍스트 */
 .network-info {
-  font-size: 0.75em;
-  color: #999;
-  font-weight: normal;
+  font-size: 0.85em;
+  color: #666;
+  margin: -10px 0 15px 0;
+  font-style: italic;
 }
 
 .status-bars-mini {
