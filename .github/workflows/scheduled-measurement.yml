@@ -2,8 +2,10 @@ name: Scheduled Performance Measurement
 
 on:
   schedule:
-    # 매일 한국시간 새벽 1시 (UTC 16:00)
+    # Mobile: 매일 한국시간 오전 1시 (UTC 16:00)
     - cron: '0 16 * * *'
+    # Desktop: 매일 한국시간 오전 2시 (UTC 17:00)
+    - cron: '0 17 * * *'
   
   # 수동 실행 가능
   workflow_dispatch:
@@ -36,10 +38,22 @@ jobs:
         run: |
           echo "PAGESPEED_API_KEY=${{ secrets.PAGESPEED_API_KEY }}" > .env
       
+      - name: Determine network type
+        id: network
+        run: |
+          HOUR=$(date -u +%H)
+          if [ "$HOUR" == "16" ]; then
+            echo "type=Mobile" >> $GITHUB_OUTPUT
+          else
+            echo "type=Desktop" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Run measurement
         working-directory: ./backend
         run: node run-measurement.js
-        timeout-minutes: 120
+        timeout-minutes: 300
+        env:
+          NETWORK_TYPE: ${{ steps.network.outputs.type }}
       
       - name: Configure Git
         run: |
@@ -49,5 +63,5 @@ jobs:
       - name: Commit and push if changes
         run: |
           git add backend/database/performance.db
-          git diff --staged --quiet || git commit -m "Auto-update: Performance measurement $(date +'%Y-%m-%d %H:%M:%S')"
+          git diff --staged --quiet || git commit -m "Auto-update: ${{ steps.network.outputs.type }} measurement $(date +'%Y-%m-%d %H:%M:%S')"
           git push

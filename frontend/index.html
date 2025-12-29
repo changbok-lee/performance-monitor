@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>성능 모니터링 대시보드</title>
+  <title>아임웹 고객사 FO 속도 성능 모니터링 대시보드</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
@@ -11,7 +11,7 @@
   <div class="container">
     <header>
       <div class="header-content">
-        <h1>📊 성능 모니터링 대시보드</h1>
+        <h1>📊 아임웹 고객사 FO 속도 성능 모니터링 대시보드</h1>
         <nav>
           <a href="index.html" class="active">📊 대시보드</a>
           <a href="url-manager.html">⚙️ URL 관리</a>
@@ -26,110 +26,120 @@
     </header>
 
     <main>
-      <!-- 상단 요약 카드 -->
-      <section class="summary-cards">
-        <div class="card card-blue">
-          <div class="card-icon">📊</div>
-          <div class="card-content">
-            <div class="card-title">전체 평균</div>
-            <div class="card-value" id="avgPerformance">-</div>
-            <div class="card-label">Performance 점수</div>
+      <!-- 통합 요약 섹션 -->
+      <section class="unified-summary">
+        <!-- 상단 요약 카드 -->
+        <div class="summary-cards-compact">
+          <div class="card card-blue">
+            <div class="card-icon">📊</div>
+            <div class="card-content">
+              <div class="card-title">전체 평균</div>
+              <div class="card-value" id="avgPerformance">-</div>
+              <div class="card-label">Performance 점수</div>
+            </div>
+          </div>
+
+          <div class="card card-green">
+            <div class="card-icon">✅</div>
+            <div class="card-content">
+              <div class="card-title">Good 비율</div>
+              <div class="card-value" id="goodRate">-</div>
+              <div class="card-label">90점 이상</div>
+            </div>
+          </div>
+
+          <div class="card card-purple" onclick="location.href='url-manager.html'" style="cursor: pointer;">
+            <div class="card-icon">🔗</div>
+            <div class="card-content">
+              <div class="card-title">측정된 URL</div>
+              <div class="card-value" id="totalUrls">-</div>
+              <div class="card-label">개</div>
+            </div>
+          </div>
+
+          <div class="card card-orange" onclick="scrollToResults()" style="cursor: pointer;">
+            <div class="card-icon">📈</div>
+            <div class="card-content">
+              <div class="card-title">총 측정 횟수</div>
+              <div class="card-value" id="totalMeasurements">-</div>
+              <div class="card-label">회</div>
+            </div>
           </div>
         </div>
 
-        <div class="card card-green">
-          <div class="card-icon">✅</div>
-          <div class="card-content">
-            <div class="card-title">Good 비율</div>
-            <div class="card-value" id="goodRate">-</div>
-            <div class="card-label">90점 이상</div>
+        <!-- 하단 통합 정보 -->
+        <div class="summary-bottom">
+          <!-- 상태별 분포 -->
+          <div class="status-section">
+            <h3>📊 상태별 분포</h3>
+            <div class="status-bars-mini">
+              <div class="status-item-mini">
+                <span class="status-label-mini good">✅ Good</span>
+                <span class="status-value-mini" id="goodCount">0개 (0%)</span>
+              </div>
+              <div class="status-item-mini">
+                <span class="status-label-mini warning">⚠️ Needs Improvement</span>
+                <span class="status-value-mini" id="warningCount">0개 (0%)</span>
+              </div>
+              <div class="status-item-mini">
+                <span class="status-label-mini poor">❌ Poor</span>
+                <span class="status-value-mini" id="poorCount">0개 (0%)</span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div class="card card-purple">
-          <div class="card-icon">🔗</div>
-          <div class="card-content">
-            <div class="card-title">측정된 URL</div>
-            <div class="card-value" id="totalUrls">-</div>
-            <div class="card-label">개</div>
-          </div>
-        </div>
+          <!-- 네트워크별 비교 -->
+          <div class="network-section">
+            <h3>📱 Mobile vs 💻 Desktop <span class="network-info">(Slow 4G / Cable)</span></h3>
+            <div class="network-comparison-mini">
+              <div class="network-card-mini">
+                <h4>📱 Mobile</h4>
+                <div class="network-metrics">
+                  <div class="network-metric">
+                    <span>Performance</span>
+                    <strong id="mobilePerf">-</strong>
+                  </div>
+                  <div class="network-metric">
+                    <span>FCP</span>
+                    <strong id="mobileFcp">-</strong>
+                  </div>
+                  <div class="network-metric">
+                    <span>LCP</span>
+                    <strong id="mobileLcp">-</strong>
+                  </div>
+                </div>
+              </div>
 
-        <div class="card card-orange">
-          <div class="card-icon">📈</div>
-          <div class="card-content">
-            <div class="card-title">총 측정 횟수</div>
-            <div class="card-value" id="totalMeasurements">-</div>
-            <div class="card-label">회</div>
+              <div class="network-card-mini">
+                <h4>💻 Desktop</h4>
+                <div class="network-metrics">
+                  <div class="network-metric">
+                    <span>Performance</span>
+                    <strong id="desktopPerf">-</strong>
+                  </div>
+                  <div class="network-metric">
+                    <span>FCP</span>
+                    <strong id="desktopFcp">-</strong>
+                  </div>
+                  <div class="network-metric">
+                    <span>LCP</span>
+                    <strong id="desktopLcp">-</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- 상태별 분포 (축소) -->
-      <section class="status-distribution-compact">
-        <h2>📊 상태별 분포</h2>
-        <div class="status-bars-compact">
-          <div class="status-item-compact">
-            <span class="status-label-compact good">✅ Good</span>
-            <div class="status-value-compact" id="goodCount">0개 (0%)</div>
-          </div>
-          <div class="status-item-compact">
-            <span class="status-label-compact warning">⚠️ Needs Improvement</span>
-            <div class="status-value-compact" id="warningCount">0개 (0%)</div>
-          </div>
-          <div class="status-item-compact">
-            <span class="status-label-compact poor">❌ Poor</span>
-            <div class="status-value-compact" id="poorCount">0개 (0%)</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 네트워크별 비교 -->
-      <section class="network-comparison">
-        <h2>📱 Mobile vs 💻 Desktop</h2>
-        <div class="comparison-grid">
-          <div class="comparison-card">
-            <h3>📱 Mobile</h3>
-            <div class="metric">
-              <span class="metric-label">Performance</span>
-              <span class="metric-value" id="mobilePerf">-</span>
-            </div>
-            <div class="metric">
-              <span class="metric-label">FCP</span>
-              <span class="metric-value" id="mobileFcp">-</span>
-            </div>
-            <div class="metric">
-              <span class="metric-label">LCP</span>
-              <span class="metric-value" id="mobileLcp">-</span>
-            </div>
-          </div>
-
-          <div class="comparison-card">
-            <h3>💻 Desktop</h3>
-            <div class="metric">
-              <span class="metric-label">Performance</span>
-              <span class="metric-value" id="desktopPerf">-</span>
-            </div>
-            <div class="metric">
-              <span class="metric-label">FCP</span>
-              <span class="metric-value" id="desktopFcp">-</span>
-            </div>
-            <div class="metric">
-              <span class="metric-label">LCP</span>
-              <span class="metric-value" id="desktopLcp">-</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 성능 추이 차트 (180일) -->
+      <!-- 성능 추이 차트 (180일, Mobile/Desktop 분리) -->
       <section class="chart-section">
         <h2>📈 성능 추이 (최근 180일)</h2>
         <canvas id="performanceChart"></canvas>
       </section>
 
-      <!-- 최근 측정 결과 (평균) -->
-      <section class="data-table-section">
+      <!-- 최근 측정 결과 (탭 방식) -->
+      <section class="data-table-section" id="resultsSection">
         <div class="section-header">
           <h2>📋 최근 측정 결과 (URL별 평균)</h2>
           <div class="button-group">
@@ -142,84 +152,84 @@
           </div>
         </div>
 
+        <!-- 네트워크 탭 -->
+        <div class="network-tabs">
+          <button class="tab-btn active" onclick="switchNetworkTab('Mobile')">
+            📱 Mobile
+          </button>
+          <button class="tab-btn" onclick="switchNetworkTab('Desktop')">
+            💻 Desktop
+          </button>
+        </div>
+
         <div class="filters-enhanced">
-                <div class="filter-row">
-                    <div class="filter-item">
-                    <label>사이트명</label>
-                    <select id="siteNameFilter">
-                        <option value="">전체</option>
-                    </select>
-                    </div>
+          <div class="filter-row">
+            <div class="filter-item">
+              <label>사이트명</label>
+              <select id="siteNameFilter">
+                <option value="">전체</option>
+              </select>
+            </div>
 
-                    <div class="filter-item">
-                    <label>페이지상세</label>
-                    <select id="pageDetailFilter">
-                        <option value="">전체</option>
-                    </select>
-                    </div>
+            <div class="filter-item">
+              <label>페이지상세</label>
+              <select id="pageDetailFilter">
+                <option value="">전체</option>
+              </select>
+            </div>
 
-                    <div class="filter-item">
-                    <label>네트워크</label>
-                    <select id="networkFilter">
-                        <option value="">전체</option>
-                        <option value="Mobile">📱 Mobile</option>
-                        <option value="Desktop">💻 Desktop</option>
-                    </select>
-                    </div>
+            <div class="filter-item">
+              <label>상태</label>
+              <select id="statusFilter">
+                <option value="">전체</option>
+                <option value="Good">✅ Good</option>
+                <option value="Needs Improvement">⚠️ Needs Improvement</option>
+                <option value="Poor">❌ Poor</option>
+              </select>
+            </div>
+          </div>
 
-                    <div class="filter-item">
-                    <label>상태</label>
-                    <select id="statusFilter">
-                        <option value="">전체</option>
-                        <option value="Good">✅ Good</option>
-                        <option value="Needs Improvement">⚠️ Needs Improvement</option>
-                        <option value="Poor">❌ Poor</option>
-                    </select>
-                    </div>
-                </div>
+          <div class="filter-row">
+            <div class="filter-item filter-search">
+              <label>URL 검색</label>
+              <input 
+                type="text" 
+                id="tableSearch" 
+                placeholder="URL 검색..."
+              >
+            </div>
 
-                <div class="filter-row">
-                    <div class="filter-item filter-search">
-                    <label>URL 검색</label>
-                    <input 
-                        type="text" 
-                        id="tableSearch" 
-                        placeholder="URL 검색..."
-                    >
-                    </div>
-
-                    <div class="filter-actions">
-                    <button onclick="applyFilters()" class="btn btn-primary">
-                        🔍 조회
-                    </button>
-                    <button onclick="resetFilters()" class="btn btn-secondary">
-                        🔄 초기화
-                    </button>
-                    </div>
-                </div>
-                </div>
+            <div class="filter-actions">
+              <button onclick="applyFilters()" class="btn btn-primary">
+                🔍 조회
+              </button>
+              <button onclick="resetFilters()" class="btn btn-secondary">
+                🔄 초기화
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div class="table-container">
           <table id="resultsTable">
             <thead>
               <tr>
-                <th>최근 측정일시</th>
-                <th>URL</th>
-                <th>사이트명</th>
-                <th>페이지상세</th>
-                <th>네트워크</th>
-                <th>Performance</th>
-                <th>상태</th>
-                <th>FCP</th>
-                <th>LCP</th>
-                <th>TBT</th>
-                <th>상세보기</th>
-                <th>측정 횟수</th>
+                <th style="width: 120px;">최근측정일시</th>
+                <th style="width: 180px;">URL</th>
+                <th style="width: 100px;">사이트명</th>
+                <th style="width: 100px;">페이지상세</th>
+                <th style="width: 90px;">Performance</th>
+                <th style="width: 80px;">상태</th>
+                <th style="width: 70px;">FCP</th>
+                <th style="width: 70px;">LCP</th>
+                <th style="width: 70px;">TBT</th>
+                <th style="width: 90px;">상세보기</th>
+                <th style="width: 70px;">측정횟수</th>
               </tr>
             </thead>
             <tbody id="resultsTableBody">
               <tr>
-                <td colspan="12" style="text-align:center;">
+                <td colspan="11" style="text-align:center;">
                   데이터를 불러오는 중...
                 </td>
               </tr>
@@ -316,7 +326,7 @@
             </div>
           </section>
 
-          <!-- 측정 이력 테이블 (측정소요시간 제외) -->
+          <!-- 측정 이력 테이블 -->
           <section class="detail-section">
             <h3>📋 측정 이력 (최신순)</h3>
             <div class="table-container">
