@@ -597,16 +597,17 @@ async function monitorMeasurementProgress(totalUrls) {
         }, 1500);
       }
       
-      if (noProgressCount >= 15) {
+      // ⭐ 여기 수정: 15 → 150 (5분) ⭐
+      if (noProgressCount >= 150) {
         clearInterval(measurementCheckInterval);
         
-        document.getElementById('loadingTitle').textContent = '⏱️ 타임아웃';
-        document.getElementById('loadingMessage').textContent = '측정이 너무 오래 걸립니다.';
-        document.getElementById('currentUrl').textContent = '서버 콘솔을 확인해주세요.';
+        document.getElementById('loadingTitle').textContent = '⏱️ 진행 상황 타임아웃';
+        document.getElementById('loadingMessage').textContent = '측정이 백그라운드에서 계속 진행 중입니다.';
+        document.getElementById('currentUrl').textContent = '서버 콘솔을 확인하거나 잠시 후 새로고침하세요.';
         
         setTimeout(() => {
           hideLoadingModal();
-          alert('⏱️ 측정 타임아웃\n서버 콘솔을 확인해주세요.');
+          alert('⏱️ 진행 상황 확인 타임아웃 (5분)\n\n측정은 백그라운드에서 계속 진행됩니다.\n서버 콘솔을 확인하거나 잠시 후 대시보드를 새로고침하세요.');
           loadDashboard();
         }, 2000);
       }
