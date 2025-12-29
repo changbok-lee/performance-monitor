@@ -10,19 +10,25 @@
 <body>
   <div class="container">
     <header>
-      <div class="header-content">
+    <div class="header-content">
         <h1>📊 아임웹 고객사 FO 속도 성능 모니터링 대시보드</h1>
         <nav>
-          <a href="index.html" class="active">📊 대시보드</a>
-          <a href="url-manager.html">⚙️ URL 관리</a>
-          <button onclick="startMeasurement()" class="btn btn-primary btn-header" id="measureBtn">
-            🚀 지금 측정 시작
-          </button>
-          <button onclick="clearAllMeasurements()" class="btn btn-danger btn-header">
+        <a href="index.html" class="nav-link active">📊 대시보드</a>
+        <a href="url-manager.html" class="nav-link">⚙️ URL 관리</a>
+        <button onclick="startMeasurement('all')" class="btn btn-measure btn-all">
+            🚀 전체 측정
+        </button>
+        <button onclick="startMeasurement('Mobile')" class="btn btn-measure btn-mobile">
+            📱 Mobile 측정
+        </button>
+        <button onclick="startMeasurement('Desktop')" class="btn btn-measure btn-desktop">
+            💻 Desktop 측정
+        </button>
+        <button onclick="clearAllMeasurements()" class="btn btn-measure btn-danger">
             🗑️ 측정 결과 초기화
-          </button>
+        </button>
         </nav>
-      </div>
+    </div>
     </header>
 
     <main>

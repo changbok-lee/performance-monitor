@@ -154,10 +154,9 @@ function drawPerformanceChart(measurements) {
   const desktopDataMap = {};
 
   mobileMeasurements.forEach(m => {
-    // 시간을 제외한 날짜만 추출 (한국 시간 기준)
     const measureDate = new Date(m.measured_at);
-    const koreaDate = new Date(measureDate.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
-    const date = koreaDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    const koreaDate = new Date(measureDate.getTime() + (9 * 60 * 60 * 1000));
+    const date = koreaDate.toISOString().split('T')[0];
     
     if (!mobileDataMap[date]) {
       mobileDataMap[date] = [];
@@ -166,10 +165,9 @@ function drawPerformanceChart(measurements) {
   });
 
   desktopMeasurements.forEach(m => {
-    // 시간을 제외한 날짜만 추출 (한국 시간 기준)
     const measureDate = new Date(m.measured_at);
-    const koreaDate = new Date(measureDate.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
-    const date = koreaDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    const koreaDate = new Date(measureDate.getTime() + (9 * 60 * 60 * 1000));
+    const date = koreaDate.toISOString().split('T')[0];
     
     if (!desktopDataMap[date]) {
       desktopDataMap[date] = [];
@@ -350,6 +348,7 @@ function displayAverageMeasurements(measurements) {
   renderTable(averagedData.filter(d => d.network === currentNetworkTab));
 }
 
+
 // ==================== 필터 옵션 생성 ====================
 
 function populateFilterOptions(data) {
@@ -462,20 +461,34 @@ function resetFilters() {
   renderTable(filteredAveragedData.filter(d => d.network === currentNetworkTab));
 }
 
-// ==================== 측정 시작 ====================
+// ==================== 측정 시작 (3개 버튼 대응) ====================
 
-async function startMeasurement() {
-  const btn = document.getElementById('measureBtn');
+async function startMeasurement(network = 'all') {
+  // 버튼 텍스트
+  const networkText = {
+    'all': '전체',
+    'Mobile': 'Mobile',
+    'Desktop': 'Desktop'
+  };
   
-  if (!confirm('등록된 모든 URL의 성능 측정을 시작하시겠습니까?\n시간이 오래 걸릴 수 있습니다.')) {
+  const text = networkText[network] || '전체';
+  
+  if (!confirm(`${text} URL의 성능 측정을 시작하시겠습니까?\n시간이 오래 걸릴 수 있습니다.`)) {
     return;
   }
 
   showLoadingModal();
+  
+  // 로딩 타이틀 변경
+  document.getElementById('loadingTitle').textContent = `⏳ ${text} 성능 측정 중...`;
 
   try {
     const response = await fetch(`${API_BASE}/measure`, {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ network: network })
     });
 
     const result = await response.json();
@@ -492,6 +505,8 @@ async function startMeasurement() {
     alert('❌ 측정 시작 실패: ' + error.message);
   }
 }
+
+// ... 이어서 ...
 
 // ==================== 로딩 모달 관리 ====================
 
@@ -616,6 +631,7 @@ async function monitorMeasurementProgress(totalUrls) {
     }
   }, 2000);
   
+  // ⭐ 여기 수정! ⭐
   setTimeout(() => {
     if (measurementCheckInterval) {
       clearInterval(measurementCheckInterval);
@@ -623,7 +639,7 @@ async function monitorMeasurementProgress(totalUrls) {
       alert('⚠️ 측정 시간이 초과되었습니다. 대시보드를 확인해주세요.');
       loadDashboard();
     }
-  }, 3600000);
+  }, 10800000);  // 3시간 (180분)
 }
 
 // ==================== CSV 다운로드 ====================
@@ -732,7 +748,7 @@ function showDetailModal(url, network) {
 
   displayHistoryTable(history);
   drawDetailChart(recentHistory);
-  displayLatestAnalysis(latest);
+  displayLatestAnalysis(history);
 
   document.getElementById('detailModal').style.display = 'block';
 }
@@ -884,10 +900,18 @@ function drawDetailChart(history) {
 
 // ==================== 최신 측정 분석 표시 ====================
 
-function displayLatestAnalysis(latest) {
+function displayLatestAnalysis(history) {
   const issuesDiv = document.getElementById('detail-issues');
-  if (latest.issues) {
-    const issuesList = latest.issues.split('|').map(i => i.trim());
+  const suggestionsDiv = document.getElementById('detail-suggestions');
+  
+  // issues가 있는 가장 최신 데이터 찾기
+  const withIssues = history.find(h => h.issues && h.issues.trim());
+  
+  if (withIssues && withIssues.issues) {
+    // 쉼표(,) 또는 파이프(|)로 분리
+    const separator = withIssues.issues.includes('|') ? '|' : ',';
+    const issuesList = withIssues.issues.split(separator).map(i => i.trim()).filter(i => i);
+    
     issuesDiv.innerHTML = '<ul>' + 
       issuesList.map(issue => `<li>${issue}</li>`).join('') + 
       '</ul>';
@@ -895,9 +919,10 @@ function displayLatestAnalysis(latest) {
     issuesDiv.innerHTML = '<p class="text-muted">문제점 정보 없음</p>';
   }
 
-  const suggestionsDiv = document.getElementById('detail-suggestions');
-  if (latest.suggestions) {
-    const suggestionsList = latest.suggestions.split('|').map(s => s.trim());
+  if (withIssues && withIssues.suggestions) {
+    // 파이프(|)로 분리
+    const suggestionsList = withIssues.suggestions.split('|').map(s => s.trim()).filter(s => s);
+    
     suggestionsDiv.innerHTML = '<ul>' + 
       suggestionsList.map(suggestion => `<li>${suggestion}</li>`).join('') + 
       '</ul>';
@@ -963,7 +988,7 @@ function getStatusEmoji(status) {
   return '❌';
 }
 
-// 상태 한글 변환 함수 추가
+// 상태 한글 변환 함수
 function getStatusKorean(status) {
   if (status === 'Good') return '우수';
   if (status === 'Needs Improvement') return '보통';
