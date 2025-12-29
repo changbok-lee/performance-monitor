@@ -397,7 +397,7 @@ function renderTable(data) {
       </td>
       <td>
         <span class="status-badge status-${d.status.toLowerCase().replace(' ', '-')}">
-          ${getStatusEmoji(d.status)} ${d.status}
+          ${getStatusEmoji(d.status)} ${getStatusKorean(d.status)}
         </span>
       </td>
       <td style="white-space: nowrap;">${d.avg_fcp > 0 ? d.avg_fcp + 's' : '-'}</td>
@@ -764,7 +764,7 @@ function displayHistoryTable(history) {
       </td>
       <td>
         <span class="status-badge status-${(h.status || 'failed').toLowerCase().replace(' ', '-')}">
-          ${getStatusEmoji(h.status)} ${h.status || 'Failed'}
+          ${getStatusEmoji(h.status)} ${getStatusKorean(h.status || 'Failed')}
         </span>
       </td>
       <td>${h.fcp && h.fcp > 0 ? h.fcp.toFixed(2) + 's' : '-'}</td>
@@ -961,4 +961,13 @@ function getStatusEmoji(status) {
   if (status === 'Good') return '✅';
   if (status === 'Needs Improvement') return '⚠️';
   return '❌';
+}
+
+// 상태 한글 변환 함수 추가
+function getStatusKorean(status) {
+  if (status === 'Good') return '우수';
+  if (status === 'Needs Improvement') return '보통';
+  if (status === 'Poor') return '개선 필요';
+  if (status === 'Failed') return '실패';
+  return status;
 }

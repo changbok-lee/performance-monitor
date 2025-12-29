@@ -8,34 +8,78 @@ async function importCSV() {
   console.log('\n📥 CSV 데이터 import 시작...\n');
   
   const results = [];
+  let rowNum = 0;
   
   // CSV 파일 읽기
-  fs.createReadStream(csvFilePath)
+  fs.createReadStream(csvFilePath, { encoding: 'utf8' })
     .pipe(csv())
+    .on('headers', (headers) => {
+      console.log('📋 CSV 헤더:', headers);
+      console.log('');
+    })
     .on('data', (row) => {
-      // 엑셀 컬럼명에 맞춰 매핑
-      const data = {
-        measured_at: convertExcelDate(row['No']), // 엑셀 날짜 변환
-        url: row['URL'],
-        site_name: row['사이트명'],
-        page_detail: row['페이지상세'],
-        network: 'Mobile', // 모바일 4G
-        performance_score: parseInt(row['Performance Score']),
-        status: row['상태'],
-        fcp: parseFloat(row['FCP (초)']),
-        lcp: parseFloat(row['LCP (초)']),
-        tbt: parseInt(row['TBT (ms)']),
-        speed_index: parseFloat(row['Speed Index']),
-        cls: 0, // 엑셀에 없으면 0
-        tti: 0,
-        issues: row['주요 문제점'] || null,
-        suggestions: row['개선 제안'] || null
-      };
+      rowNum++;
       
-      results.push(data);
+      try {
+        // 첫 번째 row 디버깅
+        if (rowNum === 1) {
+          console.log('🔍 첫 번째 row:');
+          Object.keys(row).forEach(key => {
+            console.log(`  "${key}": "${row[key]}"`);
+          });
+          console.log('');
+        }
+        
+        // 측정일시 컬럼 읽기
+        const dateValue = row['측정일시'] || '';
+        
+        if (!dateValue) {
+          console.warn(`⚠️  Row ${rowNum}: 측정일시 없음, 스킵`);
+          return;
+        }
+        
+        console.log(`📅 Row ${rowNum} 날짜: "${dateValue}"`);
+        
+        const data = {
+          measured_at: convertExcelDate(dateValue),
+          url: row['URL'] || '',
+          site_name: row['사이트명'] || '',
+          page_detail: row['페이지상세'] || '',
+          network: 'Mobile',
+          performance_score: parseInt(row['Performance Score'] || 0),
+          status: row['상태'] || 'Unknown',
+          fcp: parseFloat(row['FCP(초)'] || 0),
+          lcp: parseFloat(row['LCP(초)'] || 0),
+          tbt: parseInt(row['TBT(ms)'] || 0),
+          speed_index: parseFloat(row['Speed Index'] || 0),
+          cls: 0,
+          tti: 0,
+          issues: row['주요문제점'] || null,
+          suggestions: row['개선제안'] || null
+        };
+        
+        console.log(`  → 변환: ${data.measured_at}`);
+        
+        // URL 필수 체크
+        if (!data.url) {
+          console.warn(`⚠️  Row ${rowNum}: URL 없음, 스킵`);
+          return;
+        }
+        
+        results.push(data);
+        
+      } catch (error) {
+        console.error(`❌ Row ${rowNum} 파싱 실패:`, error.message);
+      }
     })
     .on('end', async () => {
-      console.log(`📋 총 ${results.length}개 데이터 발견\n`);
+      console.log(`\n📋 총 ${results.length}개 데이터 발견\n`);
+      
+      if (results.length === 0) {
+        console.log('❌ import할 데이터가 없습니다.');
+        db.close();
+        process.exit(1);
+      }
       
       let successCount = 0;
       let errorCount = 0;
@@ -53,7 +97,7 @@ async function importCSV() {
           });
           
           successCount++;
-          console.log(`✅ [${successCount}/${results.length}] ${data.url}`);
+          console.log(`✅ [${successCount}/${results.length}] ${data.url.substring(0, 50)} (${data.measured_at})`);
           
         } catch (error) {
           errorCount++;
@@ -64,21 +108,38 @@ async function importCSV() {
       console.log(`\n🎉 완료: 성공 ${successCount}개, 실패 ${errorCount}개`);
       db.close();
       process.exit(0);
+    })
+    .on('error', (error) => {
+      console.error('❌ CSV 읽기 실패:', error.message);
+      db.close();
+      process.exit(1);
     });
 }
 
-// 엑셀 날짜 변환 (2025. 12. 15 오전 10:34:11 → ISO 형식)
+// 엑셀 날짜 변환
 function convertExcelDate(dateStr) {
-  // "2025. 12. 15 오전 10:34:11" 형식
-  const match = dateStr.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\s*(오전|오후)\s*(\d{1,2}):(\d{2}):(\d{2})/);
+  if (!dateStr) {
+    console.warn('⚠️  날짜 없음, 현재 시간 사용');
+    return new Date().toISOString();
+  }
   
-  if (!match) return new Date().toISOString();
+  // "2025. 12. 19 오전 11:40:32" 형식
+  const match = dateStr.match(/(\d{4})[.\s]*(\d{1,2})[.\s]*(\d{1,2})\s*(오전|오후)\s*(\d{1,2}):(\d{2}):(\d{2})/);
+  
+  if (!match) {
+    console.warn(`⚠️  날짜 형식 불일치: "${dateStr}", 현재 시간 사용`);
+    return new Date().toISOString();
+  }
   
   const [_, year, month, day, ampm, hour, min, sec] = match;
   let h = parseInt(hour);
   
-  if (ampm === '오후' && h !== 12) h += 12;
-  if (ampm === '오전' && h === 12) h = 0;
+  // 오전/오후 변환
+  if (ampm === '오후' && h !== 12) {
+    h += 12;
+  } else if (ampm === '오전' && h === 12) {
+    h = 0;
+  }
   
   const date = new Date(
     parseInt(year),
@@ -88,6 +149,8 @@ function convertExcelDate(dateStr) {
     parseInt(min),
     parseInt(sec)
   );
+  
+  console.log(`    변환 상세: ${year}-${month}-${day} ${ampm} ${hour}:${min}:${sec} → ${h}시 → ${date.toISOString()}`);
   
   return date.toISOString();
 }
@@ -104,7 +167,6 @@ function findOrCreateUrlMaster(data) {
         if (row) {
           resolve(row);
         } else {
-          // 없으면 생성
           db.run(
             'INSERT INTO url_master (url, site_name, page_detail, network) VALUES (?, ?, ?, ?)',
             [data.url, data.site_name, data.page_detail, data.network],
