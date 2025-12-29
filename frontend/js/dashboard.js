@@ -1,12 +1,40 @@
 const API_BASE = 'http://localhost:3000/api';
 
 let allMeasurements = [];
+let filteredAveragedData = [];
 let performanceChart = null;
+let currentNetworkTab = 'Mobile'; // 현재 선택된 탭
 
 // 페이지 로드 시 대시보드 데이터 불러오기
 window.addEventListener('load', () => {
   loadDashboard();
 });
+
+// ==================== 스크롤 함수 ====================
+
+function scrollToResults() {
+  document.getElementById('resultsSection').scrollIntoView({ 
+    behavior: 'smooth',
+    block: 'start'
+  });
+}
+
+// ==================== 네트워크 탭 전환 ====================
+
+function switchNetworkTab(network) {
+  currentNetworkTab = network;
+  
+  // 탭 버튼 활성화 상태 변경
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.textContent.includes(network)) {
+      btn.classList.add('active');
+    }
+  });
+  
+  // 필터 적용 (현재 네트워크만)
+  applyFilters();
+}
 
 // ==================== 대시보드 데이터 로드 ====================
 
@@ -50,7 +78,7 @@ async function loadMeasurements() {
   drawPerformanceChart(allMeasurements);
 }
 
-// ==================== 상태별 분포 (축소) ====================
+// ==================== 상태별 분포 ====================
 
 function calculateStatusDistribution(measurements) {
   if (measurements.length === 0) {
@@ -104,7 +132,7 @@ async function loadNetworkComparison() {
   }
 }
 
-// ==================== 차트 그리기 (180일) ====================
+// ==================== 차트 그리기 (180일, Mobile/Desktop 분리) ====================
 
 function drawPerformanceChart(measurements) {
   if (measurements.length === 0) return;
@@ -113,27 +141,64 @@ function drawPerformanceChart(measurements) {
   const days180Ago = new Date();
   days180Ago.setDate(days180Ago.getDate() - 180);
 
-  // 180일 이내 데이터만 필터링
-  const recentMeasurements = measurements.filter(m => {
+  // Mobile과 Desktop 분리
+  const mobileMeasurements = measurements.filter(m => 
+    m.network === 'Mobile' && new Date(m.measured_at) >= days180Ago
+  );
+  const desktopMeasurements = measurements.filter(m => 
+    m.network === 'Desktop' && new Date(m.measured_at) >= days180Ago
+  );
+
+  // 날짜별 그룹화 및 평균 계산
+  const mobileDataMap = {};
+  const desktopDataMap = {};
+
+  mobileMeasurements.forEach(m => {
+    // 시간을 제외한 날짜만 추출 (한국 시간 기준)
     const measureDate = new Date(m.measured_at);
-    return measureDate >= days180Ago;
-  });
-
-  if (recentMeasurements.length === 0) return;
-
-  const dateMap = {};
-  recentMeasurements.forEach(m => {
-    const date = m.measured_at.split('T')[0];
-    if (!dateMap[date]) {
-      dateMap[date] = [];
+    const koreaDate = new Date(measureDate.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+    const date = koreaDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    if (!mobileDataMap[date]) {
+      mobileDataMap[date] = [];
     }
-    dateMap[date].push(m.performance_score);
+    mobileDataMap[date].push(m.performance_score);
   });
 
-  const dates = Object.keys(dateMap).sort();
-  const avgScores = dates.map(date => {
-    const scores = dateMap[date];
-    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  desktopMeasurements.forEach(m => {
+    // 시간을 제외한 날짜만 추출 (한국 시간 기준)
+    const measureDate = new Date(m.measured_at);
+    const koreaDate = new Date(measureDate.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+    const date = koreaDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    if (!desktopDataMap[date]) {
+      desktopDataMap[date] = [];
+    }
+    desktopDataMap[date].push(m.performance_score);
+  });
+
+  // 모든 날짜 수집 및 정렬
+  const allDates = new Set([
+    ...Object.keys(mobileDataMap),
+    ...Object.keys(desktopDataMap)
+  ]);
+  const dates = Array.from(allDates).sort();
+
+  // 날짜별 평균 계산
+  const mobileAvgScores = dates.map(date => {
+    if (mobileDataMap[date]) {
+      const scores = mobileDataMap[date];
+      return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+    }
+    return null;
+  });
+
+  const desktopAvgScores = dates.map(date => {
+    if (desktopDataMap[date]) {
+      const scores = desktopDataMap[date];
+      return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+    }
+    return null;
   });
 
   if (performanceChart) {
@@ -144,22 +209,47 @@ function drawPerformanceChart(measurements) {
   performanceChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: dates.map(d => new Date(d).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })),
-      datasets: [{
-        label: 'Performance 점수',
-        data: avgScores,
-        borderColor: '#667eea',
-        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-        tension: 0.4,
-        fill: true
-      }]
+      labels: dates.map(d => {
+        const [year, month, day] = d.split('-');
+        return `${parseInt(month)}/${parseInt(day)}`;
+      }),
+      datasets: [
+        {
+          label: '📱 Mobile Performance',
+          data: mobileAvgScores,
+          borderColor: '#667eea',
+          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          tension: 0.4,
+          fill: true,
+          spanGaps: true
+        },
+        {
+          label: '💻 Desktop Performance',
+          data: desktopAvgScores,
+          borderColor: '#f39c12',
+          backgroundColor: 'rgba(243, 156, 18, 0.1)',
+          tension: 0.4,
+          fill: true,
+          spanGaps: true
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: true,
       plugins: {
         legend: {
-          display: false
+          display: true,
+          position: 'top'
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            title: function(context) {
+              return dates[context[0].dataIndex];
+            }
+          }
         }
       },
       scales: {
@@ -179,15 +269,13 @@ function drawPerformanceChart(measurements) {
 
 // ==================== 평균 측정 결과 표시 ====================
 
-let filteredAveragedData = []; // 전역 변수로 저장
-
 function displayAverageMeasurements(measurements) {
   const tbody = document.getElementById('resultsTableBody');
 
   if (measurements.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="12" style="text-align:center;">
+        <td colspan="11" style="text-align:center;">
           측정 결과가 없습니다. URL을 등록하고 측정을 시작하세요.
         </td>
       </tr>
@@ -258,8 +346,8 @@ function displayAverageMeasurements(measurements) {
   // 필터 옵션 생성
   populateFilterOptions(averagedData);
 
-  // 테이블 렌더링
-  renderTable(averagedData);
+  // 테이블 렌더링 (현재 선택된 네트워크만)
+  renderTable(averagedData.filter(d => d.network === currentNetworkTab));
 }
 
 // ==================== 필터 옵션 생성 ====================
@@ -283,19 +371,25 @@ function populateFilterOptions(data) {
 function renderTable(data) {
   const tbody = document.getElementById('resultsTableBody');
 
+  if (data.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="11" style="text-align:center;">
+          해당 네트워크의 데이터가 없습니다.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
   tbody.innerHTML = data.slice(0, 100).map(d => `
     <tr ${d.hasError ? 'style="background-color: #fff3cd;"' : ''}>
-      <td>${formatDateTime(d.latest_measured_at)}</td>
+      <td style="white-space: nowrap;">${formatDateTime(d.latest_measured_at)}</td>
       <td class="url-cell" title="${d.url}">
         <a href="${d.url}" target="_blank">${truncateUrl(d.url, 30)}</a>
       </td>
       <td>${d.site_name || '-'}</td>
       <td>${d.page_detail || '-'}</td>
-      <td>
-        <span class="badge badge-${d.network.toLowerCase()}">
-          ${d.network === 'Mobile' ? '📱' : '💻'} ${d.network}
-        </span>
-      </td>
       <td>
         <span class="score score-${getScoreClass(d.avg_performance)}">
           ${d.avg_performance}
@@ -306,15 +400,15 @@ function renderTable(data) {
           ${getStatusEmoji(d.status)} ${d.status}
         </span>
       </td>
-      <td>${d.avg_fcp > 0 ? d.avg_fcp + 's' : '-'}</td>
-      <td>${d.avg_lcp > 0 ? d.avg_lcp + 's' : '-'}</td>
-      <td>${d.avg_tbt > 0 ? d.avg_tbt + 'ms' : '-'}</td>
+      <td style="white-space: nowrap;">${d.avg_fcp > 0 ? d.avg_fcp + 's' : '-'}</td>
+      <td style="white-space: nowrap;">${d.avg_lcp > 0 ? d.avg_lcp + 's' : '-'}</td>
+      <td style="white-space: nowrap;">${d.avg_tbt > 0 ? d.avg_tbt + 'ms' : '-'}</td>
       <td>
         <button onclick="showDetailModal('${d.url}', '${d.network}')" class="btn-small btn-primary">
           상세보기
         </button>
       </td>
-      <td>${d.count}회</td>
+      <td style="text-align: center;">${d.count}회</td>
     </tr>
   `).join('');
 }
@@ -324,11 +418,13 @@ function renderTable(data) {
 function applyFilters() {
   const siteNameValue = document.getElementById('siteNameFilter').value;
   const pageDetailValue = document.getElementById('pageDetailFilter').value;
-  const networkValue = document.getElementById('networkFilter').value;
   const statusValue = document.getElementById('statusFilter').value;
   const searchValue = document.getElementById('tableSearch').value.toLowerCase();
 
   let filtered = filteredAveragedData;
+
+  // 네트워크 필터 (현재 탭)
+  filtered = filtered.filter(d => d.network === currentNetworkTab);
 
   // 사이트명 필터
   if (siteNameValue) {
@@ -338,11 +434,6 @@ function applyFilters() {
   // 페이지상세 필터
   if (pageDetailValue) {
     filtered = filtered.filter(d => d.page_detail === pageDetailValue);
-  }
-
-  // 네트워크 필터
-  if (networkValue) {
-    filtered = filtered.filter(d => d.network === networkValue);
   }
 
   // 상태 필터
@@ -365,18 +456,10 @@ function applyFilters() {
 function resetFilters() {
   document.getElementById('siteNameFilter').value = '';
   document.getElementById('pageDetailFilter').value = '';
-  document.getElementById('networkFilter').value = '';
   document.getElementById('statusFilter').value = '';
   document.getElementById('tableSearch').value = '';
 
-  renderTable(filteredAveragedData);
-}
-
-// ==================== 테이블 필터 (기존 함수 수정) ====================
-
-function filterTable() {
-  // 이제 조회 버튼으로만 필터링
-  // 이 함수는 사용 안 함
+  renderTable(filteredAveragedData.filter(d => d.network === currentNetworkTab));
 }
 
 // ==================== 측정 시작 ====================
@@ -654,7 +737,7 @@ function showDetailModal(url, network) {
   document.getElementById('detailModal').style.display = 'block';
 }
 
-// ==================== 이력 테이블 표시 (측정소요시간 제외) ====================
+// ==================== 이력 테이블 표시 ====================
 
 function displayHistoryTable(history) {
   const tbody = document.getElementById('historyTableBody');
@@ -692,7 +775,7 @@ function displayHistoryTable(history) {
   `).join('');
 }
 
-// ==================== 상세 차트 그리기 (180일, TBT 제외) ====================
+// ==================== 상세 차트 그리기 ====================
 
 function drawDetailChart(history) {
   const sortedHistory = [...history].reverse();

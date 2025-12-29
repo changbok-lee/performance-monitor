@@ -4,6 +4,9 @@ const cors = require('cors');
 const path = require('path');
 const db = require('./database');
 
+// Auto-pull 추가
+const { autoPull } = require('../auto-pull');
+
 // pagespeed 함수들 import
 const pagespeed = require('./pagespeed');
 const measurePageSpeed = pagespeed.measurePageSpeed;
@@ -319,16 +322,29 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ==================== 서버 시작 ====================
+// ==================== 서버 시작 (자동 Pull 포함) ====================
 
-app.listen(PORT, () => {
-  console.log(`\n🚀 서버 실행 중: http://localhost:${PORT}`);
-  console.log(`📊 대시보드: http://localhost:${PORT}/index.html`);
-  console.log(`⚙️  URL 관리: http://localhost:${PORT}/url-manager.html`);
+async function startServer() {
+  // 서버 시작 전 자동 pull
+  try {
+    await autoPull();
+  } catch (error) {
+    console.warn('⚠️  Git pull 실패했지만 서버는 시작합니다.');
+    console.warn('    수동으로 git pull을 실행해주세요.');
+  }
   
-  // 스케줄러 시작
-  console.log('\n--- 스케줄러 설정 ---');
-  scheduler.startScheduler(); // 매일 새벽 2시 자동 실행
-  
-  console.log('\n💡 팁: 즉시 테스트하려면 대시보드에서 "🚀 지금 측정 시작" 버튼 클릭\n');
-});
+  app.listen(PORT, () => {
+    console.log(`\n🚀 서버 실행 중: http://localhost:${PORT}`);
+    console.log(`📊 대시보드: http://localhost:${PORT}/index.html`);
+    console.log(`⚙️  URL 관리: http://localhost:${PORT}/url-manager.html`);
+    
+    // 스케줄러 시작
+    console.log('\n--- 스케줄러 설정 ---');
+    scheduler.startScheduler();
+    
+    console.log('\n💡 팁: 서버를 재시작하면 최신 데이터를 자동으로 받아옵니다.\n');
+  });
+}
+
+// 서버 시작
+startServer();
