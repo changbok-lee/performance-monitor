@@ -130,34 +130,20 @@ async function measurePageSpeed(url, network = 'Mobile') {
 
   const strategy = network === 'Mobile' ? 'mobile' : 'desktop';
   
-  // 네트워크별 throttling 설정
-  const throttling = network === 'Mobile'
-    ? {
-        rttMs: 400,
-        throughputKbps: 400,
-        requestLatencyMs: 400,
-        downloadThroughputKbps: 400,
-        uploadThroughputKbps: 400,
-        cpuSlowdownMultiplier: 4
-      }
-    : {
-        rttMs: 10,
-        throughputKbps: 102400,
-        requestLatencyMs: 10,
-        downloadThroughputKbps: 102400,
-        uploadThroughputKbps: 51200,
-        cpuSlowdownMultiplier: 1
-      };
-
+  // PageSpeed API는 기본적으로 throttling을 적용
+  // Mobile: Slow 4G
+  // Desktop: Lighthouse의 기본 Desktop throttling 사용
+  
   const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed`;
 
   try {
     const response = await axios.get(apiUrl, {
       params: {
-        url: encodeURIComponent(url),
+        url: url,
         strategy: strategy,
         category: 'performance',
-        key: apiKey
+        key: apiKey,
+        locale: 'ko'
       },
       timeout: 120000
     });
@@ -202,8 +188,12 @@ async function measurePageSpeed(url, network = 'Mobile') {
     };
 
     console.log(`✅ 완료: ${url} - ${performanceScore}점`);
-    console.log(`  - 문제점: ${result.issues || '없음'}`);
-    console.log(`  - 개선안: ${result.suggestions || '없음'}`);
+    if (result.issues) {
+      console.log(`  ⚠️  문제점: ${result.issues.substring(0, 80)}...`);
+    }
+    if (result.suggestions) {
+      console.log(`  💡 개선안: ${result.suggestions.substring(0, 80)}...`);
+    }
 
     return result;
 
