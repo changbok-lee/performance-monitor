@@ -2,11 +2,20 @@ name: Scheduled Performance Measurement
 
 on:
   schedule:
-    # Mobile: 매일 한국시간 오전 1시 (UTC 16:00)
+    # Mobile: 매일 한국시간 새벽 1시 (UTC 16:00)
     - cron: '0 16 * * *'
-    # Desktop: 매일 한국시간 오전 2시 (UTC 17:00)
-    - cron: '0 17 * * *'
+    # Desktop: 매일 한국시간 새벽 2시 30분 (UTC 17:30)
+    - cron: '30 17 * * *'
   workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network type to measure'
+        required: true
+        default: 'Mobile'
+        type: choice
+        options:
+          - Mobile
+          - Desktop
 
 jobs:
   measure:
@@ -33,17 +42,32 @@ jobs:
       - name: Determine network type
         id: network
         run: |
-          HOUR=$(date -u +%H)
-          if [ "$HOUR" == "16" ]; then
-            echo "type=Mobile" >> $GITHUB_OUTPUT
+          # 수동 실행 시 입력값 사용
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.network }}" >> $GITHUB_OUTPUT
+            echo "🎯 Manual execution: ${{ github.event.inputs.network }}"
           else
-            echo "type=Desktop" >> $GITHUB_OUTPUT
+            # 스케줄 실행 시 시간 기반 자동 결정
+            HOUR=$(date -u +%H)
+            MINUTE=$(date -u +%M)
+            
+            if [ "$HOUR" == "16" ]; then
+              echo "type=Mobile" >> $GITHUB_OUTPUT
+              echo "📱 Scheduled execution: Mobile (UTC 16:00)"
+            elif [ "$HOUR" == "17" ] && [ "$MINUTE" -ge "30" ]; then
+              echo "type=Desktop" >> $GITHUB_OUTPUT
+              echo "💻 Scheduled execution: Desktop (UTC 17:30)"
+            else
+              echo "type=Desktop" >> $GITHUB_OUTPUT
+              echo "💻 Default execution: Desktop"
+            fi
           fi
 
       - name: Display measurement info
         run: |
           echo "🚀 Starting ${{ steps.network.outputs.type }} measurement"
           echo "📅 Time: $(date +'%Y-%m-%d %H:%M:%S %Z')"
+          echo "🔄 Trigger: ${{ github.event_name }}"
           echo "⏱️  Timeout: 300 minutes"
 
       - name: Run measurement
@@ -61,7 +85,7 @@ jobs:
           git config --local user.name "GitHub Actions"
           
           echo "📥 Pulling latest changes..."
-          git pull --rebase origin main || git pull origin main || true
+          git pull --rebase origin main || git pull origin main || echo "Pull completed with warnings"
           
           echo "📊 Adding database changes..."
           git add backend/database/performance.db
@@ -70,29 +94,31 @@ jobs:
             echo "ℹ️  No changes to commit"
           else
             echo "💾 Committing changes..."
-            git commit -m "Auto-update: ${{ steps.network.outputs.type }} measurement $(date +'%Y-%m-%d %H:%M:%S')"
+            COMMIT_MSG="Auto-update: ${{ steps.network.outputs.type }} measurement $(date +'%Y-%m-%d %H:%M:%S')"
+            git commit -m "$COMMIT_MSG"
             
-            echo "📤 Pushing changes..."
-            MAX_RETRIES=3
+            echo "📤 Pushing changes with retry logic..."
+            MAX_RETRIES=5
             RETRY_COUNT=0
+            PUSH_SUCCESS=false
             
-            until git push origin main || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
-              RETRY_COUNT=$((RETRY_COUNT+1))
-              echo "⚠️  Push failed, retrying ($RETRY_COUNT/$MAX_RETRIES)..."
-              
-              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                echo "📥 Pulling again..."
-                git pull --rebase origin main || git pull origin main || true
-                sleep 5
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$PUSH_SUCCESS" = false ]; do
+              if git push origin main; then
+                echo "✅ Successfully pushed on attempt $((RETRY_COUNT + 1))"
+                PUSH_SUCCESS=true
+              else
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                  echo "⚠️  Push failed, retrying ($RETRY_COUNT/$MAX_RETRIES)..."
+                  echo "📥 Pulling latest changes before retry..."
+                  git pull --rebase origin main || git pull origin main || echo "Pull completed with warnings"
+                  sleep 5
+                else
+                  echo "❌ Failed to push after $MAX_RETRIES attempts"
+                  exit 1
+                fi
               fi
             done
-            
-            if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-              echo "❌ Failed to push after $MAX_RETRIES attempts"
-              exit 1
-            else
-              echo "✅ Successfully pushed changes"
-            fi
           fi
 
       - name: Summary
@@ -101,10 +127,21 @@ jobs:
           echo "## 📊 Measurement Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Network:** ${{ steps.network.outputs.type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Time:** $(date +'%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           
           if [ -f backend/database/performance.db ]; then
             DB_SIZE=$(du -h backend/database/performance.db | cut -f1)
+            RECORD_COUNT=$(sqlite3 backend/database/performance.db "SELECT COUNT(*) FROM measurements;")
             echo "- **Database Size:** $DB_SIZE" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total Records:** $RECORD_COUNT" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Measurement completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Measurement failed. Check logs for details.**" >> $GITHUB_STEP_SUMMARY
           fi
