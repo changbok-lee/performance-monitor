@@ -1,240 +1,269 @@
 const API_BASE = 'http://localhost:3000/api';
 
 let allMeasurements = [];
-let filteredAveragedData = [];
-let performanceChart = null;
-let currentNetworkTab = 'Mobile'; // 현재 선택된 탭
+let currentFilter = 'all';
+let currentSort = { column: 'latest', order: 'desc' };
+let measurementCheckInterval = null;
 
-// 페이지 로드 시 대시보드 데이터 불러오기
-window.addEventListener('load', () => {
-  loadDashboard();
-});
+// ==================== 한국시간 변환 유틸리티 ====================
 
-// ==================== 스크롤 함수 ====================
-
-function scrollToResults() {
-  document.getElementById('resultsSection').scrollIntoView({ 
-    behavior: 'smooth',
-    block: 'start'
-  });
+// UTC 시간을 한국시간으로 변환
+function toKoreaTime(date) {
+  const utcTime = date.getTime();
+  const koreaOffset = 9 * 60 * 60 * 1000; // UTC+9
+  return new Date(utcTime + koreaOffset);
 }
 
-// ==================== 네트워크 탭 전환 ====================
-
-function switchNetworkTab(network) {
-  currentNetworkTab = network;
-  
-  // 탭 버튼 활성화 상태 변경
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('active');
-    if (btn.textContent.includes(network)) {
-      btn.classList.add('active');
-    }
-  });
-  
-  // 필터 적용 (현재 네트워크만)
-  applyFilters();
+// ISO 문자열을 한국시간 Date 객체로
+function parseToKoreaTime(isoString) {
+  const utcDate = new Date(isoString);
+  return toKoreaTime(utcDate);
 }
 
-// ==================== 대시보드 데이터 로드 ====================
+// 한국시간으로 날짜/시간 포맷팅
+function formatDateTime(isoString) {
+  const koreaDate = parseToKoreaTime(isoString);
+  
+  const month = koreaDate.getUTCMonth() + 1;
+  const day = koreaDate.getUTCDate();
+  const hours = koreaDate.getUTCHours();
+  const minutes = String(koreaDate.getUTCMinutes()).padStart(2, '0');
+  const period = hours < 12 ? '오전' : '오후';
+  const displayHours = hours % 12 || 12;
+  
+  return `${month}월 ${day}일 ${period} ${String(displayHours).padStart(2, '0')}:${minutes}`;
+}
+
+// 한국시간으로 날짜만 포맷팅
+function formatDate(isoString) {
+  const koreaDate = parseToKoreaTime(isoString);
+  
+  const month = koreaDate.getUTCMonth() + 1;
+  const day = koreaDate.getUTCDate();
+  
+  return `${month}월 ${day}일`;
+}
+
+// 한국시간으로 상세 날짜/시간 포맷팅 (YYYY-MM-DD HH:mm:ss)
+function formatDetailDateTime(isoString) {
+  const koreaDate = parseToKoreaTime(isoString);
+  
+  const year = koreaDate.getUTCFullYear();
+  const month = String(koreaDate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(koreaDate.getUTCDate()).padStart(2, '0');
+  const hours = String(koreaDate.getUTCHours()).padStart(2, '0');
+  const minutes = String(koreaDate.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(koreaDate.getUTCSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+// ==================== 상태 한글 변환 ====================
+
+function getStatusKorean(status) {
+  if (status === 'Good') return '우수';
+  if (status === 'Needs Improvement') return '보통';
+  if (status === 'Poor') return '개선 필요';
+  if (status === 'Failed') return '실패';
+  return status;
+}
+
+// ==================== 대시보드 로드 ====================
 
 async function loadDashboard() {
   try {
-    await loadStats();
-    await loadMeasurements();
-    await loadNetworkComparison();
+    showLoading();
+    
+    const response = await fetch(`${API_BASE}/measurements`);
+    if (!response.ok) {
+      throw new Error('데이터를 불러오는데 실패했습니다.');
+    }
+    
+    allMeasurements = await response.json();
+    
+    displaySummary(allMeasurements);
+    displayStatusDistribution(allMeasurements);
+    displayNetworkComparison(allMeasurements);
+    displayPerformanceTrend(allMeasurements);
+    displayAverageMeasurements(allMeasurements, currentFilter);
+    
+    hideLoading();
   } catch (error) {
     console.error('대시보드 로드 실패:', error);
-    alert('데이터를 불러오는 중 오류가 발생했습니다.');
+    hideLoading();
+    alert('데이터를 불러오는데 실패했습니다.');
   }
 }
 
-// ==================== 통계 데이터 ====================
+// ==================== 통합 요약 ====================
 
-async function loadStats() {
-  const response = await fetch(`${API_BASE}/stats`);
-  const stats = await response.json();
-
-  document.getElementById('avgPerformance').textContent = 
-    stats.avg_performance ? Math.round(stats.avg_performance) + '점' : '-';
+function displaySummary(measurements) {
+  if (measurements.length === 0) {
+    document.getElementById('overallAverage').textContent = '-';
+    document.getElementById('goodPercentage').textContent = '-';
+    document.getElementById('totalUrls').textContent = '0';
+    document.getElementById('totalMeasurements').textContent = '0';
+    return;
+  }
   
-  document.getElementById('totalUrls').textContent = 
-    stats.total_urls || '0';
+  const validScores = measurements.filter(m => m.performance_score > 0);
+  const avgScore = validScores.reduce((sum, m) => sum + m.performance_score, 0) / validScores.length;
+  const goodCount = measurements.filter(m => m.status === 'Good').length;
+  const goodPercent = (goodCount / measurements.length) * 100;
   
-  document.getElementById('totalMeasurements').textContent = 
-    stats.total_measurements || '0';
-}
-
-// ==================== 측정 결과 로드 ====================
-
-async function loadMeasurements() {
-  const response = await fetch(`${API_BASE}/measurements?limit=10000`);
-  const data = await response.json();
+  const uniqueUrls = [...new Set(measurements.map(m => m.url))];
   
-  allMeasurements = data.measurements;
-
-  calculateStatusDistribution(allMeasurements);
-  displayAverageMeasurements(allMeasurements);
-  drawPerformanceChart(allMeasurements);
+  document.getElementById('overallAverage').textContent = Math.round(avgScore);
+  document.getElementById('goodPercentage').textContent = goodPercent.toFixed(1) + '%';
+  document.getElementById('totalUrls').textContent = uniqueUrls.length;
+  document.getElementById('totalMeasurements').textContent = measurements.length;
 }
 
 // ==================== 상태별 분포 ====================
 
-function calculateStatusDistribution(measurements) {
-  if (measurements.length === 0) {
-    document.getElementById('goodRate').textContent = '-';
-    return;
-  }
-
-  const good = measurements.filter(m => m.performance_score >= 90).length;
-  const warning = measurements.filter(m => m.performance_score >= 50 && m.performance_score < 90).length;
-  const poor = measurements.filter(m => m.performance_score < 50).length;
-  const total = measurements.length;
-
-  const goodRate = Math.round((good / total) * 100);
-  const warningRate = Math.round((warning / total) * 100);
-  const poorRate = Math.round((poor / total) * 100);
-
-  document.getElementById('goodRate').textContent = goodRate + '%';
-  document.getElementById('goodCount').textContent = `${good}개 (${goodRate}%)`;
-  document.getElementById('warningCount').textContent = `${warning}개 (${warningRate}%)`;
-  document.getElementById('poorCount').textContent = `${poor}개 (${poorRate}%)`;
+function displayStatusDistribution(measurements) {
+  const statusCounts = {
+    'Good': 0,
+    'Needs Improvement': 0,
+    'Poor': 0
+  };
+  
+  measurements.forEach(m => {
+    if (statusCounts.hasOwnProperty(m.status)) {
+      statusCounts[m.status]++;
+    }
+  });
+  
+  const total = measurements.length || 1;
+  
+  document.getElementById('goodCount').textContent = statusCounts['Good'];
+  document.getElementById('goodPercent').textContent = 
+    `(${((statusCounts['Good'] / total) * 100).toFixed(1)}%)`;
+  
+  document.getElementById('needsImprovementCount').textContent = statusCounts['Needs Improvement'];
+  document.getElementById('needsImprovementPercent').textContent = 
+    `(${((statusCounts['Needs Improvement'] / total) * 100).toFixed(1)}%)`;
+  
+  document.getElementById('poorCount').textContent = statusCounts['Poor'];
+  document.getElementById('poorPercent').textContent = 
+    `(${((statusCounts['Poor'] / total) * 100).toFixed(1)}%)`;
 }
 
-// ==================== 네트워크별 비교 ====================
+// ==================== 네트워크 비교 ====================
 
-async function loadNetworkComparison() {
-  const mobile = allMeasurements.filter(m => m.network === 'Mobile');
-  const desktop = allMeasurements.filter(m => m.network === 'Desktop');
-
-  if (mobile.length > 0) {
-    const mobileAvg = {
-      perf: Math.round(mobile.reduce((sum, m) => sum + m.performance_score, 0) / mobile.length),
-      fcp: (mobile.reduce((sum, m) => sum + m.fcp, 0) / mobile.length).toFixed(2),
-      lcp: (mobile.reduce((sum, m) => sum + m.lcp, 0) / mobile.length).toFixed(2)
+function displayNetworkComparison(measurements) {
+  const mobileData = measurements.filter(m => m.network === 'Mobile');
+  const desktopData = measurements.filter(m => m.network === 'Desktop');
+  
+  function calculateAverage(data) {
+    if (data.length === 0) return { score: 0, fcp: 0, lcp: 0 };
+    const validData = data.filter(m => m.performance_score > 0);
+    if (validData.length === 0) return { score: 0, fcp: 0, lcp: 0 };
+    
+    return {
+      score: Math.round(validData.reduce((sum, m) => sum + m.performance_score, 0) / validData.length),
+      fcp: (validData.reduce((sum, m) => sum + m.fcp, 0) / validData.length).toFixed(2),
+      lcp: (validData.reduce((sum, m) => sum + m.lcp, 0) / validData.length).toFixed(2)
     };
-
-    document.getElementById('mobilePerf').textContent = mobileAvg.perf + '점';
-    document.getElementById('mobileFcp').textContent = mobileAvg.fcp + '초';
-    document.getElementById('mobileLcp').textContent = mobileAvg.lcp + '초';
   }
-
-  if (desktop.length > 0) {
-    const desktopAvg = {
-      perf: Math.round(desktop.reduce((sum, m) => sum + m.performance_score, 0) / desktop.length),
-      fcp: (desktop.reduce((sum, m) => sum + m.fcp, 0) / desktop.length).toFixed(2),
-      lcp: (desktop.reduce((sum, m) => sum + m.lcp, 0) / desktop.length).toFixed(2)
-    };
-
-    document.getElementById('desktopPerf').textContent = desktopAvg.perf + '점';
-    document.getElementById('desktopFcp').textContent = desktopAvg.fcp + '초';
-    document.getElementById('desktopLcp').textContent = desktopAvg.lcp + '초';
-  }
+  
+  const mobileAvg = calculateAverage(mobileData);
+  const desktopAvg = calculateAverage(desktopData);
+  
+  document.getElementById('mobilePerf').textContent = mobileAvg.score || '-';
+  document.getElementById('mobileFcp').textContent = mobileAvg.fcp ? mobileAvg.fcp + 's' : '-';
+  document.getElementById('mobileLcp').textContent = mobileAvg.lcp ? mobileAvg.lcp + 's' : '-';
+  
+  document.getElementById('desktopPerf').textContent = desktopAvg.score || '-';
+  document.getElementById('desktopFcp').textContent = desktopAvg.fcp ? desktopAvg.fcp + 's' : '-';
+  document.getElementById('desktopLcp').textContent = desktopAvg.lcp ? desktopAvg.lcp + 's' : '-';
 }
 
-// ==================== 차트 그리기 (180일, Mobile/Desktop 분리) ====================
+// ==================== 성능 추이 차트 ====================
 
-function drawPerformanceChart(measurements) {
-  if (measurements.length === 0) return;
-
-  // 180일 전 날짜 계산
+function displayPerformanceTrend(measurements) {
+  const canvas = document.getElementById('trendChart');
+  const ctx = canvas.getContext('2d');
+  
+  if (window.trendChartInstance) {
+    window.trendChartInstance.destroy();
+  }
+  
   const days180Ago = new Date();
   days180Ago.setDate(days180Ago.getDate() - 180);
-
-  // Mobile과 Desktop 분리
-  const mobileMeasurements = measurements.filter(m => 
-    m.network === 'Mobile' && new Date(m.measured_at) >= days180Ago
-  );
-  const desktopMeasurements = measurements.filter(m => 
-    m.network === 'Desktop' && new Date(m.measured_at) >= days180Ago
-  );
-
-  // 날짜별 그룹화 및 평균 계산
-  const mobileDataMap = {};
-  const desktopDataMap = {};
-
-  mobileMeasurements.forEach(m => {
-    const measureDate = new Date(m.measured_at);
-    const koreaDate = new Date(measureDate.getTime() + (9 * 60 * 60 * 1000));
-    const date = koreaDate.toISOString().split('T')[0];
+  
+  const recentData = measurements.filter(m => {
+    const measureDate = parseToKoreaTime(m.measured_at);
+    return measureDate >= days180Ago;
+  });
+  
+  const mobileData = recentData.filter(m => m.network === 'Mobile');
+  const desktopData = recentData.filter(m => m.network === 'Desktop');
+  
+  function groupByDate(data) {
+    const grouped = {};
+    data.forEach(m => {
+      const koreaDate = parseToKoreaTime(m.measured_at);
+      const dateKey = koreaDate.toISOString().split('T')[0];
+      
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey].push(m.performance_score);
+    });
     
-    if (!mobileDataMap[date]) {
-      mobileDataMap[date] = [];
-    }
-    mobileDataMap[date].push(m.performance_score);
-  });
-
-  desktopMeasurements.forEach(m => {
-    const measureDate = new Date(m.measured_at);
-    const koreaDate = new Date(measureDate.getTime() + (9 * 60 * 60 * 1000));
-    const date = koreaDate.toISOString().split('T')[0];
-    
-    if (!desktopDataMap[date]) {
-      desktopDataMap[date] = [];
-    }
-    desktopDataMap[date].push(m.performance_score);
-  });
-
-  // 모든 날짜 수집 및 정렬
-  const allDates = new Set([
-    ...Object.keys(mobileDataMap),
-    ...Object.keys(desktopDataMap)
-  ]);
-  const dates = Array.from(allDates).sort();
-
-  // 날짜별 평균 계산
-  const mobileAvgScores = dates.map(date => {
-    if (mobileDataMap[date]) {
-      const scores = mobileDataMap[date];
-      return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-    }
-    return null;
-  });
-
-  const desktopAvgScores = dates.map(date => {
-    if (desktopDataMap[date]) {
-      const scores = desktopDataMap[date];
-      return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-    }
-    return null;
-  });
-
-  if (performanceChart) {
-    performanceChart.destroy();
+    return Object.keys(grouped)
+      .sort()
+      .map(date => ({
+        date,
+        avg: grouped[date].reduce((a, b) => a + b, 0) / grouped[date].length
+      }));
   }
-
-  const ctx = document.getElementById('performanceChart');
-  performanceChart = new Chart(ctx, {
+  
+  const mobileByDate = groupByDate(mobileData);
+  const desktopByDate = groupByDate(desktopData);
+  
+  const allDates = [...new Set([
+    ...mobileByDate.map(d => d.date),
+    ...desktopByDate.map(d => d.date)
+  ])].sort();
+  
+  const mobileScores = allDates.map(date => {
+    const found = mobileByDate.find(d => d.date === date);
+    return found ? found.avg : null;
+  });
+  
+  const desktopScores = allDates.map(date => {
+    const found = desktopByDate.find(d => d.date === date);
+    return found ? found.avg : null;
+  });
+  
+  window.trendChartInstance = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: dates.map(d => {
-        const [year, month, day] = d.split('-');
-        return `${parseInt(month)}/${parseInt(day)}`;
-      }),
+      labels: allDates,
       datasets: [
         {
-          label: '📱 Mobile Performance',
-          data: mobileAvgScores,
-          borderColor: '#667eea',
-          backgroundColor: 'rgba(102, 126, 234, 0.1)',
-          tension: 0.4,
-          fill: true,
+          label: '📱 Mobile',
+          data: mobileScores,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.1)',
+          tension: 0.1,
           spanGaps: true
         },
         {
-          label: '💻 Desktop Performance',
-          data: desktopAvgScores,
-          borderColor: '#f39c12',
-          backgroundColor: 'rgba(243, 156, 18, 0.1)',
-          tension: 0.4,
-          fill: true,
+          label: '💻 Desktop',
+          data: desktopScores,
+          borderColor: 'rgb(153, 102, 255)',
+          backgroundColor: 'rgba(153, 102, 255, 0.1)',
+          tension: 0.1,
           spanGaps: true
         }
       ]
     },
     options: {
       responsive: true,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: {
           display: true,
@@ -242,22 +271,22 @@ function drawPerformanceChart(measurements) {
         },
         tooltip: {
           mode: 'index',
-          intersect: false,
-          callbacks: {
-            title: function(context) {
-              return dates[context[0].dataIndex];
-            }
-          }
+          intersect: false
         }
       },
       scales: {
         y: {
           beginAtZero: true,
           max: 100,
-          ticks: {
-            callback: function(value) {
-              return value + '점';
-            }
+          title: {
+            display: true,
+            text: 'Performance Score'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: '날짜 (한국시간)'
           }
         }
       }
@@ -265,224 +294,320 @@ function drawPerformanceChart(measurements) {
   });
 }
 
-// ==================== 평균 측정 결과 표시 ====================
+// ==================== URL별 평균 테이블 ====================
 
-function displayAverageMeasurements(measurements) {
-  const tbody = document.getElementById('resultsTableBody');
-
-  if (measurements.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="11" style="text-align:center;">
-          측정 결과가 없습니다. URL을 등록하고 측정을 시작하세요.
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  // URL + 네트워크별 그룹화
+function displayAverageMeasurements(measurements, filter = 'all') {
+  currentFilter = filter;
+  
+  const filteredData = filter === 'all' 
+    ? measurements 
+    : measurements.filter(m => m.network === filter);
+  
   const groupedData = {};
-  measurements.forEach(m => {
-    const key = `${m.url}|${m.network}`;
+  
+  filteredData.forEach(m => {
+    const key = `${m.url}_${m.network}`;
+    
     if (!groupedData[key]) {
       groupedData[key] = {
         url: m.url,
         site_name: m.site_name,
-        page_detail: m.page_detail,
         network: m.network,
-        measurements: [],
-        latest_measured_at: m.measured_at
+        scores: [],
+        fcps: [],
+        lcps: [],
+        tbts: [],
+        latest_measured_at: m.measured_at,
+        count: 0
       };
     }
-    groupedData[key].measurements.push(m);
-    if (new Date(m.measured_at) > new Date(groupedData[key].latest_measured_at)) {
+    
+    groupedData[key].scores.push(m.performance_score);
+    groupedData[key].fcps.push(m.fcp);
+    groupedData[key].lcps.push(m.lcp);
+    groupedData[key].tbts.push(m.tbt);
+    groupedData[key].count++;
+    
+    const currentDate = parseToKoreaTime(m.measured_at);
+    const latestDate = parseToKoreaTime(groupedData[key].latest_measured_at);
+    
+    if (currentDate > latestDate) {
       groupedData[key].latest_measured_at = m.measured_at;
     }
   });
-
-  // 평균 계산
-  const averagedData = Object.values(groupedData).map(group => {
-    const count = group.measurements.length;
-    const validMeasurements = group.measurements.filter(m => !m.error);
+  
+  const averagedData = Object.values(groupedData).map(data => {
+    const avg_score = data.scores.reduce((a, b) => a + b, 0) / data.scores.length;
+    const avg_fcp = data.fcps.reduce((a, b) => a + b, 0) / data.fcps.length;
+    const avg_lcp = data.lcps.reduce((a, b) => a + b, 0) / data.lcps.length;
+    const avg_tbt = data.tbts.reduce((a, b) => a + b, 0) / data.tbts.length;
     
-    if (validMeasurements.length === 0) {
-      return {
-        ...group,
-        avg_performance: 0,
-        avg_fcp: 0,
-        avg_lcp: 0,
-        avg_tbt: 0,
-        status: 'Failed',
-        count: count,
-        hasError: true
-      };
-    }
-
-    const avg_performance = Math.round(
-      validMeasurements.reduce((sum, m) => sum + m.performance_score, 0) / validMeasurements.length
-    );
-
+    let status = 'Good';
+    if (avg_score < 90) status = 'Needs Improvement';
+    if (avg_score < 50) status = 'Poor';
+    
     return {
-      ...group,
-      avg_performance: avg_performance,
-      avg_fcp: (validMeasurements.reduce((sum, m) => sum + (m.fcp || 0), 0) / validMeasurements.length).toFixed(2),
-      avg_lcp: (validMeasurements.reduce((sum, m) => sum + (m.lcp || 0), 0) / validMeasurements.length).toFixed(2),
-      avg_tbt: Math.round(validMeasurements.reduce((sum, m) => sum + (m.tbt || 0), 0) / validMeasurements.length),
-      status: getStatus(avg_performance),
-      count: count,
-      hasError: false
+      url: data.url,
+      site_name: data.site_name,
+      network: data.network,
+      avg_score: Math.round(avg_score),
+      avg_fcp: avg_fcp.toFixed(2),
+      avg_lcp: avg_lcp.toFixed(2),
+      avg_tbt: Math.round(avg_tbt),
+      status: status,
+      latest_measured_at: data.latest_measured_at,
+      count: data.count
     };
   });
-
-  // 최신 측정일시 순 정렬
-  averagedData.sort((a, b) => new Date(b.latest_measured_at) - new Date(a.latest_measured_at));
-
-  // 전역 변수에 저장
-  filteredAveragedData = averagedData;
-
-  // 필터 옵션 생성
-  populateFilterOptions(averagedData);
-
-  // 테이블 렌더링 (현재 선택된 네트워크만)
-  renderTable(averagedData.filter(d => d.network === currentNetworkTab));
+  
+  averagedData.sort((a, b) => {
+    const aDate = parseToKoreaTime(a.latest_measured_at);
+    const bDate = parseToKoreaTime(b.latest_measured_at);
+    return bDate - aDate;
+  });
+  
+  renderTable(averagedData);
 }
-
-
-// ==================== 필터 옵션 생성 ====================
-
-function populateFilterOptions(data) {
-  // 사이트명 옵션
-  const siteNames = [...new Set(data.map(d => d.site_name).filter(s => s))].sort();
-  const siteNameFilter = document.getElementById('siteNameFilter');
-  siteNameFilter.innerHTML = '<option value="">전체</option>' +
-    siteNames.map(name => `<option value="${name}">${name}</option>`).join('');
-
-  // 페이지상세 옵션
-  const pageDetails = [...new Set(data.map(d => d.page_detail).filter(p => p))].sort();
-  const pageDetailFilter = document.getElementById('pageDetailFilter');
-  pageDetailFilter.innerHTML = '<option value="">전체</option>' +
-    pageDetails.map(detail => `<option value="${detail}">${detail}</option>`).join('');
-}
-
-// ==================== 테이블 렌더링 ====================
 
 function renderTable(data) {
-  const tbody = document.getElementById('resultsTableBody');
-
+  const tbody = document.getElementById('measurementsTable');
+  
   if (data.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="11" style="text-align:center;">
-          해당 네트워크의 데이터가 없습니다.
-        </td>
-      </tr>
-    `;
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px;">측정 데이터가 없습니다.</td></tr>';
     return;
   }
-
-  tbody.innerHTML = data.slice(0, 100).map(d => `
-    <tr ${d.hasError ? 'style="background-color: #fff3cd;"' : ''}>
-      <td style="white-space: nowrap;">${formatDateTime(d.latest_measured_at)}</td>
-      <td class="url-cell" title="${d.url}">
-        <a href="${d.url}" target="_blank">${truncateUrl(d.url, 30)}</a>
-      </td>
-      <td>${d.site_name || '-'}</td>
-      <td>${d.page_detail || '-'}</td>
-      <td>
-        <span class="score score-${getScoreClass(d.avg_performance)}">
-          ${d.avg_performance}
-        </span>
-      </td>
-      <td>
-        <span class="status-badge status-${d.status.toLowerCase().replace(' ', '-')}">
-          ${getStatusEmoji(d.status)} ${getStatusKorean(d.status)}
-        </span>
-      </td>
-      <td style="white-space: nowrap;">${d.avg_fcp > 0 ? d.avg_fcp + 's' : '-'}</td>
-      <td style="white-space: nowrap;">${d.avg_lcp > 0 ? d.avg_lcp + 's' : '-'}</td>
-      <td style="white-space: nowrap;">${d.avg_tbt > 0 ? d.avg_tbt + 'ms' : '-'}</td>
-      <td>
-        <button onclick="showDetailModal('${d.url}', '${d.network}')" class="btn-small btn-primary">
-          상세보기
-        </button>
-      </td>
-      <td style="text-align: center;">${d.count}회</td>
+  
+  tbody.innerHTML = data.map(m => `
+    <tr onclick="showDetailModal('${m.url}', '${m.network}')" style="cursor: pointer;">
+      <td>${formatDateTime(m.latest_measured_at)}</td>
+      <td>${m.network === 'Mobile' ? '📱' : '💻'} ${m.network}</td>
+      <td title="${m.url}">${m.site_name || m.url}</td>
+      <td><span class="score-badge score-${m.status.toLowerCase().replace(' ', '-')}">${m.avg_score}</span></td>
+      <td><span class="status-badge status-${m.status.toLowerCase().replace(' ', '-')}">${getStatusKorean(m.status)}</span></td>
+      <td>${m.avg_fcp}s</td>
+      <td>${m.avg_lcp}s</td>
+      <td>${m.avg_tbt}ms</td>
+      <td>${m.count}회</td>
     </tr>
   `).join('');
 }
 
-// ==================== 필터 적용 ====================
+// ==================== 네트워크 필터 ====================
 
-function applyFilters() {
-  const siteNameValue = document.getElementById('siteNameFilter').value;
-  const pageDetailValue = document.getElementById('pageDetailFilter').value;
-  const statusValue = document.getElementById('statusFilter').value;
-  const searchValue = document.getElementById('tableSearch').value.toLowerCase();
-
-  let filtered = filteredAveragedData;
-
-  // 네트워크 필터 (현재 탭)
-  filtered = filtered.filter(d => d.network === currentNetworkTab);
-
-  // 사이트명 필터
-  if (siteNameValue) {
-    filtered = filtered.filter(d => d.site_name === siteNameValue);
-  }
-
-  // 페이지상세 필터
-  if (pageDetailValue) {
-    filtered = filtered.filter(d => d.page_detail === pageDetailValue);
-  }
-
-  // 상태 필터
-  if (statusValue) {
-    filtered = filtered.filter(d => d.status === statusValue);
-  }
-
-  // URL 검색
-  if (searchValue) {
-    filtered = filtered.filter(d => 
-      d.url.toLowerCase().includes(searchValue)
-    );
-  }
-
-  renderTable(filtered);
+function filterByNetwork(network) {
+  const buttons = document.querySelectorAll('.network-filter-btn');
+  buttons.forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  displayAverageMeasurements(allMeasurements, network);
 }
 
-// ==================== 필터 초기화 ====================
+// ==================== 상세보기 모달 ====================
 
-function resetFilters() {
-  document.getElementById('siteNameFilter').value = '';
-  document.getElementById('pageDetailFilter').value = '';
-  document.getElementById('statusFilter').value = '';
-  document.getElementById('tableSearch').value = '';
-
-  renderTable(filteredAveragedData.filter(d => d.network === currentNetworkTab));
+async function showDetailModal(url, network) {
+  const modal = document.getElementById('detailModal');
+  
+  document.getElementById('detail-url-display').textContent = url;
+  document.getElementById('detail-network-display').textContent = network === 'Mobile' ? '📱 Mobile' : '💻 Desktop';
+  
+  const history = allMeasurements.filter(m => m.url === url && m.network === network);
+  
+  if (history.length === 0) {
+    alert('측정 이력이 없습니다.');
+    return;
+  }
+  
+  displayBasicInfo(history);
+  displayDetailChart(history);
+  displayHistoryTable(history);
+  displayLatestAnalysis(history);
+  
+  modal.style.display = 'block';
 }
 
-// ==================== 측정 시작 (3개 버튼 대응) ====================
+function closeDetailModal() {
+  document.getElementById('detailModal').style.display = 'none';
+}
 
-async function startMeasurement(network = 'all') {
-  // 버튼 텍스트
-  const networkText = {
-    'all': '전체',
-    'Mobile': 'Mobile',
-    'Desktop': 'Desktop'
-  };
+window.onclick = function(event) {
+  const modal = document.getElementById('detailModal');
+  if (event.target === modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// ==================== 기본 정보 ====================
+
+function displayBasicInfo(history) {
+  const validScores = history.filter(h => h.performance_score > 0);
   
-  const text = networkText[network] || '전체';
+  if (validScores.length === 0) {
+    document.getElementById('detail-avg-score').textContent = '-';
+    document.getElementById('detail-avg-fcp').textContent = '-';
+    document.getElementById('detail-avg-lcp').textContent = '-';
+    document.getElementById('detail-avg-tbt').textContent = '-';
+    return;
+  }
   
-  if (!confirm(`${text} URL의 성능 측정을 시작하시겠습니까?\n시간이 오래 걸릴 수 있습니다.`)) {
+  const avgScore = validScores.reduce((sum, h) => sum + h.performance_score, 0) / validScores.length;
+  const avgFcp = validScores.reduce((sum, h) => sum + h.fcp, 0) / validScores.length;
+  const avgLcp = validScores.reduce((sum, h) => sum + h.lcp, 0) / validScores.length;
+  const avgTbt = validScores.reduce((sum, h) => sum + h.tbt, 0) / validScores.length;
+  
+  document.getElementById('detail-avg-score').textContent = Math.round(avgScore);
+  document.getElementById('detail-avg-fcp').textContent = avgFcp.toFixed(2) + 's';
+  document.getElementById('detail-avg-lcp').textContent = avgLcp.toFixed(2) + 's';
+  document.getElementById('detail-avg-tbt').textContent = Math.round(avgTbt) + 'ms';
+}
+
+// ==================== 상세 차트 ====================
+
+function displayDetailChart(history) {
+  const canvas = document.getElementById('detailChart');
+  const ctx = canvas.getContext('2d');
+  
+  if (window.detailChartInstance) {
+    window.detailChartInstance.destroy();
+  }
+  
+  const days180Ago = new Date();
+  days180Ago.setDate(days180Ago.getDate() - 180);
+  
+  const recentHistory = history.filter(h => {
+    const measureDate = parseToKoreaTime(h.measured_at);
+    return measureDate >= days180Ago;
+  });
+  
+  const sortedHistory = recentHistory.sort((a, b) => {
+    const aDate = parseToKoreaTime(a.measured_at);
+    const bDate = parseToKoreaTime(b.measured_at);
+    return aDate - bDate;
+  });
+  
+  const labels = sortedHistory.map(h => formatDate(h.measured_at));
+  const scores = sortedHistory.map(h => h.performance_score);
+  
+  window.detailChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Performance Score',
+        data: scores,
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      }
+    }
+  });
+}
+
+// ==================== 측정 이력 테이블 ====================
+
+function displayHistoryTable(history) {
+  const tbody = document.getElementById('historyTableBody');
+
+  if (history.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7">측정 이력이 없습니다.</td></tr>';
     return;
   }
 
-  showLoadingModal();
-  
-  // 로딩 타이틀 변경
-  document.getElementById('loadingTitle').textContent = `⏳ ${text} 성능 측정 중...`;
+  const sortedHistory = history.sort((a, b) => {
+    const aDate = parseToKoreaTime(a.measured_at);
+    const bDate = parseToKoreaTime(b.measured_at);
+    return bDate - aDate;
+  });
 
+  tbody.innerHTML = sortedHistory.map((h, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${formatDateTime(h.measured_at)}</td>
+      <td><span class="score-badge score-${h.status.toLowerCase().replace(' ', '-')}">${h.performance_score}</span></td>
+      <td><span class="status-badge status-${h.status.toLowerCase().replace(' ', '-')}">${getStatusKorean(h.status)}</span></td>
+      <td>${h.fcp.toFixed(2)}s</td>
+      <td>${h.lcp.toFixed(2)}s</td>
+      <td>${h.tbt}ms</td>
+      <td>${h.speed_index ? h.speed_index.toFixed(2) + 's' : '-'}</td>
+    </tr>
+  `).join('');
+}
+
+// ==================== 최신 측정 분석 ====================
+
+function displayLatestAnalysis(history) {
+  const container = document.getElementById('latestAnalysis');
+  
+  if (history.length === 0) {
+    container.innerHTML = '<p>측정 이력이 없습니다.</p>';
+    return;
+  }
+  
+  const sortedHistory = history.sort((a, b) => {
+    const aDate = parseToKoreaTime(a.measured_at);
+    const bDate = parseToKoreaTime(b.measured_at);
+    return bDate - aDate;
+  });
+  
+  const latest = sortedHistory[0];
+  
+  let html = `<h4>📅 ${formatDateTime(latest.measured_at)} 측정</h4>`;
+  
+  if (latest.issues && latest.issues.trim()) {
+    html += `
+      <div class="analysis-section">
+        <h5>⚠️ 주요 문제점</h5>
+        <ul>
+          ${latest.issues.split('|').map(issue => `<li>${issue.trim()}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  } else {
+    html += `<p>💡 문제점 정보가 없습니다.</p>`;
+  }
+  
+  if (latest.suggestions && latest.suggestions.trim()) {
+    html += `
+      <div class="analysis-section">
+        <h5>💡 개선 제안</h5>
+        <ul>
+          ${latest.suggestions.split('|').map(suggestion => `<li>${suggestion.trim()}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+  } else {
+    html += `<p>💡 개선 제안 정보가 없습니다.</p>`;
+  }
+  
+  container.innerHTML = html;
+}
+
+// ==================== 측정 시작 ====================
+
+async function startMeasurement(network = 'all') {
+  const confirmation = confirm(`${network === 'all' ? '전체' : network} 성능 측정을 시작하시겠습니까?\n\n측정에는 약 4~5분이 소요됩니다.`);
+  
+  if (!confirmation) {
+    return;
+  }
+  
   try {
+    showLoadingModal(network);
+    
     const response = await fetch(`${API_BASE}/measure`, {
       method: 'POST',
       headers: {
@@ -490,55 +615,24 @@ async function startMeasurement(network = 'all') {
       },
       body: JSON.stringify({ network: network })
     });
-
-    const result = await response.json();
-
-    if (result.success) {
-      monitorMeasurementProgress(result.count);
-    } else {
-      hideLoadingModal();
-      alert('❌ ' + result.message);
+    
+    if (!response.ok) {
+      throw new Error('측정 시작에 실패했습니다.');
     }
-
+    
+    const result = await response.json();
+    console.log('측정 시작:', result);
+    
+    monitorMeasurementProgress(result.totalUrls);
+    
   } catch (error) {
+    console.error('측정 시작 실패:', error);
     hideLoadingModal();
-    alert('❌ 측정 시작 실패: ' + error.message);
-  }
-}
-
-// ... 이어서 ...
-
-// ==================== 로딩 모달 관리 ====================
-
-function showLoadingModal() {
-  const modal = document.getElementById('loadingModal');
-  modal.style.display = 'block';
-  
-  document.getElementById('loadingProgress').textContent = '0';
-  document.getElementById('loadingProgressBar').style.width = '0%';
-  document.getElementById('currentUrl').textContent = '측정 준비 중...';
-}
-
-function hideLoadingModal() {
-  const modal = document.getElementById('loadingModal');
-  modal.style.display = 'none';
-}
-
-function updateLoadingProgress(current, total, currentUrl = '') {
-  const percentage = Math.round((current / total) * 100);
-  
-  document.getElementById('loadingProgress').textContent = current;
-  document.getElementById('loadingTotal').textContent = total;
-  document.getElementById('loadingProgressBar').style.width = percentage + '%';
-  
-  if (currentUrl) {
-    document.getElementById('currentUrl').textContent = '현재: ' + currentUrl;
+    alert('측정 시작에 실패했습니다: ' + error.message);
   }
 }
 
 // ==================== 측정 진행 상황 모니터링 ====================
-
-let measurementCheckInterval = null;
 
 async function monitorMeasurementProgress(totalUrls) {
   document.getElementById('loadingTotal').textContent = totalUrls;
@@ -589,7 +683,7 @@ async function monitorMeasurementProgress(totalUrls) {
             if (status.completed > 0) {
               alert(`⚠️ 측정 완료\n성공: ${status.completed}개\n실패: ${status.failed}개\n\n서버 콘솔에서 실패 원인을 확인하세요.`);
             } else {
-              alert(`❌ 모든 측정 실패\n실패: ${status.failed}개\n\n서버 콘솔에서 실패 원인을 확인하세요.`);
+              alert(`❌ 모든 측정 실패\n실패: ${status.failed}개\n\n서버 콘솔을 확인해주세요.`);
             }
           } else {
             alert(`✅ ${status.completed}개 URL 측정 완료!`);
@@ -597,7 +691,6 @@ async function monitorMeasurementProgress(totalUrls) {
         }, 1500);
       }
       
-      // ⭐ 여기 수정: 15 → 150 (5분) ⭐
       if (noProgressCount >= 150) {
         clearInterval(measurementCheckInterval);
         
@@ -632,368 +725,59 @@ async function monitorMeasurementProgress(totalUrls) {
     }
   }, 2000);
   
-  // ⭐ 여기 수정! ⭐
   setTimeout(() => {
     if (measurementCheckInterval) {
       clearInterval(measurementCheckInterval);
       hideLoadingModal();
-      alert('⚠️ 측정 시간이 초과되었습니다. 대시보드를 확인해주세요.');
+      alert('⏱️ 전체 타임아웃 (3시간)\n\n측정은 백그라운드에서 계속 진행됩니다.\n서버 콘솔을 확인하거나 잠시 후 대시보드를 새로고침하세요.');
       loadDashboard();
     }
-  }, 10800000);  // 3시간 (180분)
+  }, 10800000);
 }
 
-// ==================== CSV 다운로드 ====================
+// ==================== 로딩 모달 ====================
 
-function downloadCSV() {
-  if (allMeasurements.length === 0) {
-    alert('다운로드할 데이터가 없습니다.');
-    return;
-  }
-
-  let csv = '측정일시,URL,사이트명,페이지상세,네트워크,Performance,상태,FCP,LCP,TBT,Speed Index\n';
-
-  allMeasurements.forEach(m => {
-    csv += `${m.measured_at},${m.url},${m.site_name || ''},${m.page_detail || ''},${m.network},${m.performance_score},${m.status},${m.fcp},${m.lcp},${m.tbt},${m.speed_index}\n`;
-  });
-
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `performance_${new Date().toISOString().split('T')[0]}.csv`;
-  link.click();
-}
-
-// ==================== 측정 결과 전체 삭제 ====================
-
-async function clearAllMeasurements() {
-  if (!confirm('⚠️ 모든 측정 결과를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다!')) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE}/measurements`, {
-      method: 'DELETE'
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      alert('✅ 모든 측정 결과가 삭제되었습니다.');
-      loadDashboard();
-    } else {
-      alert('❌ 삭제 실패: ' + (result.error || result.message));
-    }
-
-  } catch (error) {
-    alert('❌ 삭제 중 오류 발생: ' + error.message);
-  }
-}
-
-// ==================== 상세보기 모달 ====================
-
-let detailChart = null;
-
-function showDetailModal(url, network) {
-  const history = allMeasurements.filter(m => 
-    m.url === url && 
-    m.network === network
-  ).sort((a, b) => new Date(b.measured_at) - new Date(a.measured_at));
-
-  if (history.length === 0) {
-    alert('측정 이력이 없습니다.');
-    return;
-  }
-
-  const latest = history[0];
-
-  // 180일 전 날짜 계산
-  const days180Ago = new Date();
-  days180Ago.setDate(days180Ago.getDate() - 180);
-
-  // 180일 이내 데이터만 필터링
-  const recentHistory = history.filter(m => {
-    const measureDate = new Date(m.measured_at);
-    return measureDate >= days180Ago;
-  });
-
-  // 기본 정보 표시
-  document.getElementById('detail-site-name').textContent = 
-    latest.site_name || '-';
-  document.getElementById('detail-page-detail').textContent = 
-    latest.page_detail || '-';
-  document.getElementById('detail-network').innerHTML = 
-    `<span class="badge badge-${latest.network.toLowerCase()}">
-      ${latest.network === 'Mobile' ? '📱' : '💻'} ${latest.network}
-    </span>`;
-  document.getElementById('detail-url-display').innerHTML = 
-    `<a href="${latest.url}" target="_blank" title="${latest.url}">
-      ${truncateUrl(latest.url, 60)}
-    </a>`;
-
-  // 평균값 계산 및 표시
-  const validHistory = history.filter(m => !m.error);
-  if (validHistory.length > 0) {
-    const avgPerf = Math.round(validHistory.reduce((sum, m) => sum + m.performance_score, 0) / validHistory.length);
-    const avgFcp = (validHistory.reduce((sum, m) => sum + (m.fcp || 0), 0) / validHistory.length).toFixed(2);
-    const avgLcp = (validHistory.reduce((sum, m) => sum + (m.lcp || 0), 0) / validHistory.length).toFixed(2);
-    const avgTbt = Math.round(validHistory.reduce((sum, m) => sum + (m.tbt || 0), 0) / validHistory.length);
-
-    document.getElementById('detail-avg-perf').textContent = avgPerf + '점';
-    document.getElementById('detail-avg-fcp').textContent = avgFcp + '초';
-    document.getElementById('detail-avg-lcp').textContent = avgLcp + '초';
-    document.getElementById('detail-avg-tbt').textContent = avgTbt + 'ms';
-  }
-
-  document.getElementById('detail-view-url').href = latest.url;
-
-  displayHistoryTable(history);
-  drawDetailChart(recentHistory);
-  displayLatestAnalysis(history);
-
-  document.getElementById('detailModal').style.display = 'block';
-}
-
-// ==================== 이력 테이블 표시 ====================
-
-function displayHistoryTable(history) {
-  const tbody = document.getElementById('historyTableBody');
-
-  if (history.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8" style="text-align:center;">
-          측정 이력이 없습니다.
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  tbody.innerHTML = history.map((h, index) => `
-    <tr ${h.error ? 'style="background-color: #fff3cd;"' : ''}>
-      <td>${index + 1}</td>
-      <td>${formatDateTime(h.measured_at)}</td>
-      <td>
-        <span class="score score-${getScoreClass(h.performance_score)}">
-          ${h.performance_score}
-        </span>
-      </td>
-      <td>
-        <span class="status-badge status-${(h.status || 'failed').toLowerCase().replace(' ', '-')}">
-          ${getStatusEmoji(h.status)} ${getStatusKorean(h.status || 'Failed')}
-        </span>
-      </td>
-      <td>${h.fcp && h.fcp > 0 ? h.fcp.toFixed(2) + 's' : '-'}</td>
-      <td>${h.lcp && h.lcp > 0 ? h.lcp.toFixed(2) + 's' : '-'}</td>
-      <td>${h.tbt ? h.tbt + 'ms' : '-'}</td>
-      <td>${h.speed_index && h.speed_index > 0 ? h.speed_index.toFixed(2) + 's' : '-'}</td>
-    </tr>
-  `).join('');
-}
-
-// ==================== 상세 차트 그리기 ====================
-
-function drawDetailChart(history) {
-  const sortedHistory = [...history].reverse();
-
-  const labels = sortedHistory.map(h => 
-    new Date(h.measured_at).toLocaleDateString('ko-KR', { 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  );
-
-  const performanceData = sortedHistory.map(h => h.performance_score);
-  const fcpData = sortedHistory.map(h => h.fcp ? (h.fcp * 100).toFixed(0) : null);
-  const lcpData = sortedHistory.map(h => h.lcp ? (h.lcp * 100).toFixed(0) : null);
-
-  if (detailChart) {
-    detailChart.destroy();
-  }
-
-  const ctx = document.getElementById('detailChart');
-  detailChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Performance Score',
-          data: performanceData,
-          borderColor: '#667eea',
-          backgroundColor: 'rgba(102, 126, 234, 0.1)',
-          tension: 0.4,
-          fill: true,
-          yAxisID: 'y'
-        },
-        {
-          label: 'FCP (×100)',
-          data: fcpData,
-          borderColor: '#f39c12',
-          backgroundColor: 'rgba(243, 156, 18, 0.1)',
-          tension: 0.4,
-          fill: false,
-          yAxisID: 'y'
-        },
-        {
-          label: 'LCP (×100)',
-          data: lcpData,
-          borderColor: '#e74c3c',
-          backgroundColor: 'rgba(231, 76, 60, 0.1)',
-          tension: 0.4,
-          fill: false,
-          yAxisID: 'y'
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              let label = context.dataset.label || '';
-              if (label) {
-                label += ': ';
-              }
-              
-              if (context.dataset.label === 'Performance Score') {
-                label += context.parsed.y + '점';
-              } else if (context.dataset.label === 'FCP (×100)') {
-                label += (context.parsed.y / 100).toFixed(2) + '초';
-              } else if (context.dataset.label === 'LCP (×100)') {
-                label += (context.parsed.y / 100).toFixed(2) + '초';
-              }
-              
-              return label;
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          type: 'linear',
-          display: true,
-          position: 'left',
-          min: 0,
-          max: 100,
-          title: {
-            display: true,
-            text: '점수 / 스케일 조정된 값'
-          }
-        }
-      }
-    }
-  });
-}
-
-// ==================== 최신 측정 분석 표시 ====================
-
-function displayLatestAnalysis(history) {
-  const issuesDiv = document.getElementById('detail-issues');
-  const suggestionsDiv = document.getElementById('detail-suggestions');
+function showLoadingModal(network = 'all') {
+  const networkText = { 'all': '전체', 'Mobile': 'Mobile', 'Desktop': 'Desktop' };
+  const text = networkText[network] || '전체';
   
-  // issues가 있는 가장 최신 데이터 찾기
-  const withIssues = history.find(h => h.issues && h.issues.trim());
+  document.getElementById('loadingTitle').textContent = `⏳ ${text} 성능 측정 중...`;
+  document.getElementById('loadingMessage').textContent = '측정을 시작하고 있습니다...';
+  document.getElementById('currentUrl').textContent = '';
+  document.getElementById('loadingProgress').textContent = '준비 중...';
+  document.getElementById('loadingProgressBar').style.width = '0%';
   
-  if (withIssues && withIssues.issues) {
-    // 쉼표(,) 또는 파이프(|)로 분리
-    const separator = withIssues.issues.includes('|') ? '|' : ',';
-    const issuesList = withIssues.issues.split(separator).map(i => i.trim()).filter(i => i);
-    
-    issuesDiv.innerHTML = '<ul>' + 
-      issuesList.map(issue => `<li>${issue}</li>`).join('') + 
-      '</ul>';
-  } else {
-    issuesDiv.innerHTML = '<p class="text-muted">문제점 정보 없음</p>';
-  }
+  document.getElementById('loadingModal').style.display = 'block';
+}
 
-  if (withIssues && withIssues.suggestions) {
-    // 파이프(|)로 분리
-    const suggestionsList = withIssues.suggestions.split('|').map(s => s.trim()).filter(s => s);
-    
-    suggestionsDiv.innerHTML = '<ul>' + 
-      suggestionsList.map(suggestion => `<li>${suggestion}</li>`).join('') + 
-      '</ul>';
-  } else {
-    suggestionsDiv.innerHTML = '<p class="text-muted">개선 제안 없음</p>';
+function hideLoadingModal() {
+  document.getElementById('loadingModal').style.display = 'none';
+  if (measurementCheckInterval) {
+    clearInterval(measurementCheckInterval);
+    measurementCheckInterval = null;
   }
 }
 
-// ==================== 모달 닫기 ====================
-
-function closeDetailModal() {
-  document.getElementById('detailModal').style.display = 'none';
+function updateLoadingProgress(completed, total, message) {
+  const percentage = total > 0 ? (completed / total) * 100 : 0;
   
-  if (detailChart) {
-    detailChart.destroy();
-    detailChart = null;
-  }
+  document.getElementById('loadingProgress').textContent = message || `${completed} / ${total} 완료`;
+  document.getElementById('loadingProgressBar').style.width = percentage + '%';
+  document.getElementById('loadingCompleted').textContent = completed;
 }
 
-window.onclick = function(event) {
-  const detailModal = document.getElementById('detailModal');
-  if (event.target === detailModal) {
-    closeDetailModal();
-  }
-  
-  const loadingModal = document.getElementById('loadingModal');
-  if (event.target === loadingModal) {
-    // 로딩 모달은 외부 클릭해도 안 닫힘
-  }
+// ==================== 로딩 표시 ====================
+
+function showLoading() {
+  document.getElementById('loading').style.display = 'flex';
 }
 
-// ==================== 유틸리티 함수 ====================
-
-function truncateUrl(url, maxLength = 50) {
-  return url.length > maxLength ? url.substring(0, maxLength) + '...' : url;
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
 }
 
-function formatDateTime(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleString('ko-KR', { 
-    month: 'short', 
-    day: 'numeric', 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  });
-}
+// ==================== 초기화 ====================
 
-function getScoreClass(score) {
-  if (score >= 90) return 'good';
-  if (score >= 50) return 'warning';
-  return 'poor';
-}
-
-function getStatus(score) {
-  if (score >= 90) return 'Good';
-  if (score >= 50) return 'Needs Improvement';
-  return 'Poor';
-}
-
-function getStatusEmoji(status) {
-  if (status === 'Good') return '✅';
-  if (status === 'Needs Improvement') return '⚠️';
-  return '❌';
-}
-
-// 상태 한글 변환 함수
-function getStatusKorean(status) {
-  if (status === 'Good') return '우수';
-  if (status === 'Needs Improvement') return '보통';
-  if (status === 'Poor') return '개선 필요';
-  if (status === 'Failed') return '실패';
-  return status;
-}
+document.addEventListener('DOMContentLoaded', () => {
+  loadDashboard();
+});

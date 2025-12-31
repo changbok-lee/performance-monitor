@@ -1,5 +1,29 @@
 const axios = require('axios');
 
+// ==================== 한국시간 유틸리티 ====================
+
+function getKoreaTime() {
+  // 현재 시간에 9시간 추가 (UTC+9)
+  const now = new Date();
+  const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  return koreaTime.toISOString();
+}
+
+function getKoreaDateTimeString() {
+  const now = new Date();
+  const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  
+  // 한국시간 기준으로 날짜/시간 문자열 생성
+  const year = koreaTime.getUTCFullYear();
+  const month = String(koreaTime.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(koreaTime.getUTCDate()).padStart(2, '0');
+  const hours = String(koreaTime.getUTCHours()).padStart(2, '0');
+  const minutes = String(koreaTime.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(koreaTime.getUTCSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 // ==================== 문제점 추출 ====================
 
 function extractDiagnostics(lighthouseResult) {
@@ -170,10 +194,11 @@ async function measurePageSpeed(url, network = 'Mobile') {
     if (performanceScore < 90) status = 'Needs Improvement';
     if (performanceScore < 50) status = 'Poor';
 
+    // ⭐ 한국시간으로 저장 ⭐
     const result = {
       url: url,
       network: network,
-      measured_at: new Date().toISOString(),
+      measured_at: getKoreaTime(),  // 한국시간 기준 ISO 문자열
       performance_score: performanceScore,
       status: status,
       fcp: metrics.fcp,
@@ -182,12 +207,12 @@ async function measurePageSpeed(url, network = 'Mobile') {
       cls: metrics.cls,
       speed_index: metrics.speed_index,
       tti: metrics.tti,
-      measurement_time: new Date().toLocaleString('ko-KR'),
+      measurement_time: getKoreaDateTimeString(),  // 한국시간 문자열
       issues: issues.length > 0 ? issues.join(' | ') : null,
       suggestions: suggestions.length > 0 ? suggestions.join(' | ') : null
     };
 
-    console.log(`✅ 완료: ${url} - ${performanceScore}점`);
+    console.log(`✅ 완료: ${url} - ${performanceScore}점 (${getKoreaDateTimeString()})`);
     if (result.issues) {
       console.log(`  ⚠️  문제점: ${result.issues.substring(0, 80)}...`);
     }
