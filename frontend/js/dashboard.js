@@ -346,18 +346,30 @@ function displayPerformanceTrend(measurements) {
 
 function switchNetworkTab(network) {
   currentNetworkTab = network;
-  
+
   // 탭 버튼 활성화
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.remove('active');
   });
   event.target.classList.add('active');
-  
+
   // 필터 초기화
   resetFilters();
-  
+
   // 데이터 표시
   displayMeasurements(allMeasurements, network);
+}
+
+// ==================== 5G 변환 로직 ====================
+
+function convertTo5G(measurements) {
+  return measurements.map(m => ({
+    ...m,
+    fcp: m.fcp * 0.3,      // 70% 감소
+    lcp: m.lcp * 0.3,      // 70% 감소
+    tbt: m.tbt,            // 변화 없음 (JS 실행 시간)
+    speed_index: m.speed_index * 0.4  // 60% 감소
+  }));
 }
 
 // ==================== 필터 채우기 ====================
@@ -415,14 +427,20 @@ function resetFilters() {
 
 function displayMeasurements(measurements, network) {
   const tbody = document.getElementById('resultsTableBody');
-  
+
   if (!tbody) {
     console.warn('Results table body를 찾을 수 없습니다.');
     return;
   }
-  
-  // 네트워크 필터
-  let filtered = measurements.filter(m => m.network === network);
+
+  // 5G 예상값 탭인 경우 Mobile 데이터를 변환
+  let filtered;
+  if (network === 'Mobile5G') {
+    filtered = measurements.filter(m => m.network === 'Mobile');
+    filtered = convertTo5G(filtered);
+  } else {
+    filtered = measurements.filter(m => m.network === network);
+  }
   
   // 추가 필터 적용
   const siteNameFilter = document.getElementById('siteNameFilter');

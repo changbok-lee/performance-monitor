@@ -1513,16 +1513,17 @@ nav {
 }
 
 .tab-btn {
-  padding: 10px 20px;
+  padding: 10px 16px;
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 1em;
+  font-size: 0.95em;
   font-weight: 600;
   color: #999;
   border-bottom: 3px solid transparent;
   transition: all 0.3s;
   margin-bottom: -2px;
+  white-space: nowrap;
 }
 
 .tab-btn:hover {
