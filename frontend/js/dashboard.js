@@ -523,7 +523,7 @@ function displayMeasurements(measurements, network) {
       <td class="url-cell" title="${m.url}">${m.url}</td>
       <td>${m.site_name || '-'}</td>
       <td>${m.page_detail || '-'}</td>
-      <td><span class="score-badge score-${m.status.toLowerCase().replace(' ', '-')}">${m.avg_score}</span></td>
+      <td>${m.avg_score}</td>
       <td><span class="status-badge status-${m.status.toLowerCase().replace(' ', '-')}">${getStatusKorean(m.status)}</span></td>
       <td>${m.avg_fcp}s</td>
       <td>${m.avg_lcp}s</td>
@@ -726,11 +726,11 @@ function displayHistoryTable(history) {
     <tr>
       <td>${index + 1}</td>
       <td>${formatDateTime(h.measured_at)}</td>
-      <td><span class="score-badge score-${h.status.toLowerCase().replace(' ', '-')}">${h.performance_score || '-'}</span></td>
+      <td>${h.performance_score || '-'}</td>
       <td><span class="status-badge status-${h.status.toLowerCase().replace(' ', '-')}">${getStatusKorean(h.status)}</span></td>
       <td>${h.fcp != null ? h.fcp.toFixed(2) + 's' : '-'}</td>
       <td>${h.lcp != null ? h.lcp.toFixed(2) + 's' : '-'}</td>
-      <td>${h.tbt != null ? h.tbt + 'ms' : '-'}</td>
+      <td>${h.tbt != null ? Math.round(h.tbt) + 'ms' : '-'}</td>
       <td>${h.speed_index != null ? h.speed_index.toFixed(2) + 's' : '-'}</td>
     </tr>
   `).join('');
