@@ -363,13 +363,58 @@ function switchNetworkTab(network) {
 // ==================== 5G 변환 로직 ====================
 
 function convertTo5G(measurements) {
-  return measurements.map(m => ({
-    ...m,
-    fcp: m.fcp * 0.3,      // 70% 감소
-    lcp: m.lcp * 0.3,      // 70% 감소
-    tbt: m.tbt,            // 변화 없음 (JS 실행 시간)
-    speed_index: m.speed_index * 0.4  // 60% 감소
-  }));
+  return measurements.map(m => {
+    const fcp_5g = m.fcp * 0.3;
+    const lcp_5g = m.lcp * 0.3;
+    const tbt_5g = m.tbt;
+    const speed_index_5g = m.speed_index * 0.4;
+    const cls_5g = m.cls; // CLS는 네트워크와 무관
+
+    // Performance 점수 재계산 (Lighthouse 가중치 기반 근사치)
+    // FCP 10%, LCP 25%, TBT 30%, CLS 25%, Speed Index 10%
+    // 개선된 메트릭으로 점수 상승 추정
+    const improvementFactor = calculateImprovementFactor(
+      m.fcp, fcp_5g,
+      m.lcp, lcp_5g,
+      m.speed_index, speed_index_5g,
+      m.performance_score
+    );
+
+    return {
+      ...m,
+      fcp: fcp_5g,
+      lcp: lcp_5g,
+      tbt: tbt_5g,
+      speed_index: speed_index_5g,
+      cls: cls_5g,
+      performance_score: Math.min(100, Math.round(m.performance_score * improvementFactor))
+    };
+  });
+}
+
+function calculateImprovementFactor(fcp_old, fcp_new, lcp_old, lcp_new, si_old, si_new, currentScore) {
+  // 메트릭 개선률 계산
+  const fcpImprovement = (fcp_old - fcp_new) / fcp_old; // 0.7 (70% 개선)
+  const lcpImprovement = (lcp_old - lcp_new) / lcp_old; // 0.7 (70% 개선)
+  const siImprovement = (si_old - si_new) / si_old;     // 0.6 (60% 개선)
+
+  // 가중 평균 개선률 (네트워크 영향 받는 메트릭만)
+  // LCP 25% + FCP 10% + Speed Index 10% = 45% 총 가중치
+  const weightedImprovement = (lcpImprovement * 0.55 + fcpImprovement * 0.22 + siImprovement * 0.22);
+
+  // 점수 상승 계산
+  // 낮은 점수일수록 개선 여지가 크므로 더 많이 상승
+  // 높은 점수는 이미 최적화되어 있어 상승폭이 작음
+  let improvementFactor;
+  if (currentScore < 50) {
+    improvementFactor = 1 + (weightedImprovement * 1.8); // Poor: 최대 2.26배
+  } else if (currentScore < 90) {
+    improvementFactor = 1 + (weightedImprovement * 1.3); // Needs Improvement: 최대 1.81배
+  } else {
+    improvementFactor = 1 + (weightedImprovement * 0.5); // Good: 최대 1.32배
+  }
+
+  return improvementFactor;
 }
 
 // ==================== 필터 채우기 ====================
