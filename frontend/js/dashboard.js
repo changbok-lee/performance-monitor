@@ -607,7 +607,7 @@ function displayDetailAverages(history) {
   }
   
   const validScores = history.filter(h => h.performance_score > 0);
-  
+
   if (validScores.length === 0) {
     avgPerf.textContent = '-';
     avgFcp.textContent = '-';
@@ -615,16 +615,29 @@ function displayDetailAverages(history) {
     avgTbt.textContent = '-';
     return;
   }
-  
+
+  // null 값 제외하고 평균 계산
   const avgScore = validScores.reduce((sum, h) => sum + h.performance_score, 0) / validScores.length;
-  const avgFcpVal = validScores.reduce((sum, h) => sum + h.fcp, 0) / validScores.length;
-  const avgLcpVal = validScores.reduce((sum, h) => sum + h.lcp, 0) / validScores.length;
-  const avgTbtVal = validScores.reduce((sum, h) => sum + h.tbt, 0) / validScores.length;
-  
+
+  const validFcp = validScores.filter(h => h.fcp != null);
+  const avgFcpVal = validFcp.length > 0
+    ? validFcp.reduce((sum, h) => sum + h.fcp, 0) / validFcp.length
+    : null;
+
+  const validLcp = validScores.filter(h => h.lcp != null);
+  const avgLcpVal = validLcp.length > 0
+    ? validLcp.reduce((sum, h) => sum + h.lcp, 0) / validLcp.length
+    : null;
+
+  const validTbt = validScores.filter(h => h.tbt != null);
+  const avgTbtVal = validTbt.length > 0
+    ? validTbt.reduce((sum, h) => sum + h.tbt, 0) / validTbt.length
+    : null;
+
   avgPerf.textContent = Math.round(avgScore);
-  avgFcp.textContent = avgFcpVal.toFixed(2) + 's';
-  avgLcp.textContent = avgLcpVal.toFixed(2) + 's';
-  avgTbt.textContent = Math.round(avgTbtVal) + 'ms';
+  avgFcp.textContent = avgFcpVal != null ? avgFcpVal.toFixed(2) + 's' : '-';
+  avgLcp.textContent = avgLcpVal != null ? avgLcpVal.toFixed(2) + 's' : '-';
+  avgTbt.textContent = avgTbtVal != null ? Math.round(avgTbtVal) + 'ms' : '-';
 }
 
 // ==================== 상세 차트 ====================
@@ -713,12 +726,12 @@ function displayHistoryTable(history) {
     <tr>
       <td>${index + 1}</td>
       <td>${formatDateTime(h.measured_at)}</td>
-      <td><span class="score-badge score-${h.status.toLowerCase().replace(' ', '-')}">${h.performance_score}</span></td>
+      <td><span class="score-badge score-${h.status.toLowerCase().replace(' ', '-')}">${h.performance_score || '-'}</span></td>
       <td><span class="status-badge status-${h.status.toLowerCase().replace(' ', '-')}">${getStatusKorean(h.status)}</span></td>
-      <td>${h.fcp.toFixed(2)}s</td>
-      <td>${h.lcp.toFixed(2)}s</td>
-      <td>${h.tbt}ms</td>
-      <td>${h.speed_index ? h.speed_index.toFixed(2) + 's' : '-'}</td>
+      <td>${h.fcp != null ? h.fcp.toFixed(2) + 's' : '-'}</td>
+      <td>${h.lcp != null ? h.lcp.toFixed(2) + 's' : '-'}</td>
+      <td>${h.tbt != null ? h.tbt + 'ms' : '-'}</td>
+      <td>${h.speed_index != null ? h.speed_index.toFixed(2) + 's' : '-'}</td>
     </tr>
   `).join('');
 }
