@@ -380,6 +380,9 @@ function convertTo5G(measurements) {
       m.performance_score
     );
 
+    const new_score = Math.round(m.performance_score * improvementFactor);
+    const final_score = isNaN(new_score) ? m.performance_score : Math.min(100, Math.max(0, new_score));
+
     return {
       ...m,
       fcp: fcp_5g,
@@ -387,16 +390,16 @@ function convertTo5G(measurements) {
       tbt: tbt_5g,
       speed_index: speed_index_5g,
       cls: cls_5g,
-      performance_score: Math.min(100, Math.round(m.performance_score * improvementFactor))
+      performance_score: final_score
     };
   });
 }
 
 function calculateImprovementFactor(fcp_old, fcp_new, lcp_old, lcp_new, si_old, si_new, currentScore) {
-  // 메트릭 개선률 계산
-  const fcpImprovement = (fcp_old - fcp_new) / fcp_old; // 0.7 (70% 개선)
-  const lcpImprovement = (lcp_old - lcp_new) / lcp_old; // 0.7 (70% 개선)
-  const siImprovement = (si_old - si_new) / si_old;     // 0.6 (60% 개선)
+  // 메트릭 개선률 계산 (null 체크 포함)
+  const fcpImprovement = (fcp_old && fcp_new) ? (fcp_old - fcp_new) / fcp_old : 0.7;
+  const lcpImprovement = (lcp_old && lcp_new) ? (lcp_old - lcp_new) / lcp_old : 0.7;
+  const siImprovement = (si_old && si_new) ? (si_old - si_new) / si_old : 0.6;
 
   // 가중 평균 개선률 (네트워크 영향 받는 메트릭만)
   // LCP 25% + FCP 10% + Speed Index 10% = 45% 총 가중치
@@ -652,6 +655,22 @@ async function showDetailModal(url, network) {
 
 function closeDetailModal() {
   const modal = document.getElementById('detailModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// ==================== 5G 예상값 설명 모달 ====================
+
+function show5GExplanationModal() {
+  const modal = document.getElementById('explanation5GModal');
+  if (modal) {
+    modal.style.display = 'block';
+  }
+}
+
+function close5GExplanationModal() {
+  const modal = document.getElementById('explanation5GModal');
   if (modal) {
     modal.style.display = 'none';
   }

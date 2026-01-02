@@ -432,6 +432,15 @@ tbody tr:hover {
   background-color: #218838;
 }
 
+.btn-info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn-info:hover {
+  background-color: #138496;
+}
+
 .btn-danger {
   background-color: #dc3545;
   color: white;

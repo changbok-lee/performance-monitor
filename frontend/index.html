@@ -174,6 +174,9 @@
             <button onclick="downloadCSV()" class="btn btn-success">
               📥 CSV 다운로드
             </button>
+            <button onclick="show5GExplanationModal()" class="btn btn-info">
+              📱 5G 예상값
+            </button>
           </div>
         </div>
 
@@ -409,6 +412,127 @@
           <a id="detail-view-url" href="#" target="_blank" class="btn btn-primary">
             🔗 URL 열기
           </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5G 예상값 설명 모달 -->
+    <div id="explanation5GModal" class="modal">
+      <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+          <h2>📱 5G 예상값 계산 방법</h2>
+          <button onclick="close5GExplanationModal()" class="close-btn">✕</button>
+        </div>
+
+        <div class="modal-body" style="padding: 25px;">
+          <!-- 개요 -->
+          <section style="margin-bottom: 25px;">
+            <h3 style="color: #667eea; margin-bottom: 12px;">📊 개요</h3>
+            <p style="line-height: 1.7; color: #555;">
+              5G 예상값은 <strong>Slow 4G 환경에서 측정된 실제 데이터</strong>를 기반으로,
+              5G 네트워크 환경에서의 성능을 <strong>보수적으로 추정</strong>한 값입니다.
+            </p>
+          </section>
+
+          <!-- 네트워크 조건 비교 -->
+          <section style="margin-bottom: 25px;">
+            <h3 style="color: #667eea; margin-bottom: 12px;">🌐 네트워크 조건</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #f8f9fa;">
+                  <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">환경</th>
+                  <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">다운로드 속도</th>
+                  <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">속도 차이</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #ddd;"><strong>Slow 4G</strong> (측정)</td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">400 Kbps</td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">-</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #ddd;"><strong>5G</strong> (예상)</td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">~150 Mbps</td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: right; color: #28a745;"><strong>약 375배 빠름</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <!-- 변환 계산식 -->
+          <section style="margin-bottom: 25px;">
+            <h3 style="color: #667eea; margin-bottom: 12px;">🧮 변환 계산식</h3>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+              <div style="margin-bottom: 12px;">
+                <strong style="color: #667eea;">📉 네트워크 영향 메트릭 (개선됨)</strong>
+                <ul style="margin: 8px 0; padding-left: 20px; line-height: 1.8;">
+                  <li><strong>FCP</strong> (First Contentful Paint): <code>측정값 × 0.3</code> → <strong>70% 감소</strong></li>
+                  <li><strong>LCP</strong> (Largest Contentful Paint): <code>측정값 × 0.3</code> → <strong>70% 감소</strong></li>
+                  <li><strong>Speed Index</strong>: <code>측정값 × 0.4</code> → <strong>60% 감소</strong></li>
+                </ul>
+              </div>
+              <div>
+                <strong style="color: #667eea;">⚡ CPU 영향 메트릭 (변화 없음)</strong>
+                <ul style="margin: 8px 0; padding-left: 20px; line-height: 1.8;">
+                  <li><strong>TBT</strong> (Total Blocking Time): <code>측정값 그대로</code></li>
+                  <li><strong>CLS</strong> (Cumulative Layout Shift): <code>측정값 그대로</code></li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <!-- Performance 점수 재계산 -->
+          <section style="margin-bottom: 25px;">
+            <h3 style="color: #667eea; margin-bottom: 12px;">🎯 Performance 점수 재계산</h3>
+            <p style="line-height: 1.7; color: #555; margin-bottom: 12px;">
+              메트릭 개선에 따라 Performance 점수도 상승합니다.
+              현재 점수가 낮을수록 개선 효과가 크게 나타납니다.
+            </p>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #f8f9fa;">
+                  <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">현재 점수 범위</th>
+                  <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">개선 정도</th>
+                  <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">예시</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #ddd;"><strong>Poor</strong> (0-49점)</td>
+                  <td style="padding: 10px; border: 1px solid #ddd;">최대 2.26배</td>
+                  <td style="padding: 10px; border: 1px solid #ddd;">28점 → 50-63점</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #ddd;"><strong>Needs Improvement</strong> (50-89점)</td>
+                  <td style="padding: 10px; border: 1px solid #ddd;">최대 1.81배</td>
+                  <td style="padding: 10px; border: 1px solid #ddd;">50점 → 75-90점</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #ddd;"><strong>Good</strong> (90-100점)</td>
+                  <td style="padding: 10px; border: 1px solid #ddd;">최대 1.32배</td>
+                  <td style="padding: 10px; border: 1px solid #ddd;">92점 → 96-100점</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <!-- 주의사항 -->
+          <section>
+            <h3 style="color: #e74c3c; margin-bottom: 12px;">⚠️ 주의사항</h3>
+            <ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: #555;">
+              <li>이 값은 <strong>보수적 추정치</strong>로, 실제 5G 환경에서는 더 나은 성능이 나올 수 있습니다.</li>
+              <li>네트워크 속도와 무관한 요소(JavaScript 실행, 레이아웃 시프트 등)는 개선되지 않습니다.</li>
+              <li>실제 성능은 사용자 기기, 서버 응답 시간, 캐싱 등 다양한 요인에 영향을 받습니다.</li>
+              <li>참고용 지표로만 활용하시고, 정확한 측정이 필요한 경우 실제 5G 환경에서 테스트하시기 바랍니다.</li>
+            </ul>
+          </section>
+        </div>
+
+        <div class="modal-footer">
+          <button onclick="close5GExplanationModal()" class="btn btn-primary">
+            확인
+          </button>
         </div>
       </div>
     </div>
