@@ -1484,11 +1484,13 @@ nav {
   text-overflow: ellipsis;
   vertical-align: middle;
   padding: 12px 8px;
+  text-align: center;
 }
 
 #resultsTable th {
   white-space: nowrap !important;
   padding: 12px 8px;
+  text-align: center;
 }
 
 #resultsTable .url-cell {
