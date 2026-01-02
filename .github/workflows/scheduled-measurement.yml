@@ -2,15 +2,10 @@ name: Scheduled Performance Measurement
 
 on:
   schedule:
-    # TEST: Mobile 테스트 - 매일 UTC 03:58 (현재 03:47 기준 약 11분 후)
-    - cron: '58 3 * * *'
-    # TEST: Desktop 테스트 - 매일 UTC 04:03 (약 16분 후)
-    - cron: '3 4 * * *'
-    # ORIGINAL (주석처리):
     # Mobile: 매일 한국시간 새벽 1시 (UTC 16:00)
-    # - cron: '0 16 * * *'
+    - cron: '0 16 * * *'
     # Desktop: 매일 한국시간 새벽 2시 30분 (UTC 17:30)
-    # - cron: '30 17 * * *'
+    - cron: '30 17 * * *'
   workflow_dispatch:
     inputs:
       network:
@@ -56,23 +51,15 @@ jobs:
             HOUR=$(date -u +%H)
             MINUTE=$(date -u +%M)
 
-            # TEST: 테스트 스케줄 (UTC 03:58, 04:03)
-            if [ "$HOUR" == "03" ] && [ "$MINUTE" -ge "58" ]; then
+            if [ "$HOUR" == "16" ]; then
               echo "type=Mobile" >> $GITHUB_OUTPUT
-              echo "📱 TEST: Mobile (UTC 03:58)"
-            elif [ "$HOUR" == "04" ] && [ "$MINUTE" -ge "03" ]; then
+              echo "📱 Scheduled execution: Mobile (UTC 16:00)"
+            elif [ "$HOUR" == "17" ] && [ "$MINUTE" -ge "30" ]; then
               echo "type=Desktop" >> $GITHUB_OUTPUT
-              echo "💻 TEST: Desktop (UTC 04:03)"
-            # ORIGINAL (주석처리):
-            # elif [ "$HOUR" == "16" ]; then
-            #   echo "type=Mobile" >> $GITHUB_OUTPUT
-            #   echo "📱 Scheduled execution: Mobile (UTC 16:00)"
-            # elif [ "$HOUR" == "17" ] && [ "$MINUTE" -ge "30" ]; then
-            #   echo "type=Desktop" >> $GITHUB_OUTPUT
-            #   echo "💻 Scheduled execution: Desktop (UTC 17:30)"
+              echo "💻 Scheduled execution: Desktop (UTC 17:30)"
             else
-              echo "type=Mobile" >> $GITHUB_OUTPUT
-              echo "📱 Default execution: Mobile (for testing)"
+              echo "type=Desktop" >> $GITHUB_OUTPUT
+              echo "💻 Default execution: Desktop"
             fi
           fi
 
