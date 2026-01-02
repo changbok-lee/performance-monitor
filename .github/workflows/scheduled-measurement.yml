@@ -56,7 +56,7 @@ jobs:
             if [ "$HOUR" == "16" ]; then
               echo "type=Mobile" >> $GITHUB_OUTPUT
               echo "📱 Scheduled execution: Mobile (UTC 16:00)"
-            elif [ "$HOUR" == "17" ] && [ "$MINUTE" -ge "30" ]; then
+            elif [ "$HOUR" == "17" ]; then
               echo "type=Desktop" >> $GITHUB_OUTPUT
               echo "💻 Scheduled execution: Desktop (UTC 17:30)"
             else
