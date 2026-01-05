@@ -169,7 +169,7 @@ async function measurePageSpeed(url, network = 'Mobile') {
         key: apiKey,
         locale: 'ko'
       },
-      timeout: 120000
+      timeout: 180000  // 3분으로 증가 (120초 → 180초)
     });
 
     const lighthouseResult = response.data.lighthouseResult;

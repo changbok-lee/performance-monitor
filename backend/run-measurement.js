@@ -135,23 +135,50 @@ async function runMeasurements() {
 
     try {
       const result = await measurePageSpeed(url, NETWORK_TYPE);
-      
+
       // URL 정보 추가
       result.site_name = urlData.site_name;
       result.page_detail = urlData.page_detail;
 
       await saveMeasurement(result);
-      
+
       completed++;
       updateStatus(completed, failed, urls.length);
-      
+
       console.log(`   ✅ 완료: ${result.performance_score}점 (${result.status})`);
 
     } catch (error) {
       failed++;
       updateStatus(completed, failed, urls.length);
-      
+
       console.error(`   ❌ 실패: ${error.message}`);
+
+      // 실패한 URL도 0점으로 DB에 저장 (대시보드에 표시되도록)
+      try {
+        const failedResult = {
+          url: url,
+          site_name: urlData.site_name,
+          page_detail: urlData.page_detail,
+          network: NETWORK_TYPE,
+          measured_at: new Date(Date.now() + (9 * 60 * 60 * 1000)).toISOString(),
+          performance_score: 0,
+          status: 'Poor',
+          fcp: null,
+          lcp: null,
+          tbt: null,
+          cls: null,
+          speed_index: null,
+          tti: null,
+          measurement_time: getKoreaTimeString(),
+          issues: `측정 실패: ${error.message}`,
+          suggestions: null
+        };
+
+        await saveMeasurement(failedResult);
+        console.log(`   💾 실패 기록 저장 완료 (0점)`);
+      } catch (saveError) {
+        console.error(`   ⚠️ 실패 기록 저장 실패: ${saveError.message}`);
+      }
     }
 
     // 진행률 표시
@@ -169,6 +196,11 @@ async function runMeasurements() {
   console.log(`\n${'='.repeat(80)}`);
   console.log(`✅ 측정 완료 (한국시간): ${getKoreaTimeString()}`);
   console.log(`📊 결과: 성공 ${completed}개, 실패 ${failed}개 / 전체 ${urls.length}개`);
+
+  if (failed > 0) {
+    console.log(`⚠️  일부 URL 측정 실패 (${failed}개) - 실패한 URL은 대시보드에서 확인 가능`);
+  }
+
   console.log(`${'='.repeat(80)}\n`);
 
   // 데이터베이스 연결 종료
@@ -180,10 +212,15 @@ async function runMeasurements() {
     }
   });
 
-  // 실패가 있으면 exit code 1
-  if (failed > 0) {
+  // ✅ 일부 실패가 있어도 성공으로 처리 (최소 1개 이상 성공하면 OK)
+  // 전체 실패만 exit code 1
+  if (completed === 0 && failed > 0) {
+    console.error('❌ 모든 URL 측정 실패 - 스케줄링 실패 처리');
     process.exit(1);
   }
+
+  console.log('✅ 스케줄링 성공 완료');
+  process.exit(0);
 }
 
 // ==================== 에러 처리 ====================
