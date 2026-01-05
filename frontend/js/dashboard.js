@@ -24,39 +24,48 @@ function parseToKoreaTime(isoString) {
 // 한국시간으로 날짜/시간 포맷팅
 function formatDateTime(isoString) {
   const date = new Date(isoString);
-  
-  // DB에 한국시간으로 저장되어 있으므로 UTC 기준으로 읽기
-  const month = date.getUTCMonth() + 1;
-  const day = date.getUTCDate();
-  const hours = date.getUTCHours();
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+
+  // DB에 저장된 시간은 한국시간 기준 ISO 문자열 (UTC+9)
+  // UTC로 파싱하면 9시간이 더해지므로, 9시간을 빼야 실제 한국시간
+  const koreaDate = new Date(date.getTime() - (9 * 60 * 60 * 1000));
+
+  const month = koreaDate.getUTCMonth() + 1;
+  const day = koreaDate.getUTCDate();
+  const hours = koreaDate.getUTCHours();
+  const minutes = String(koreaDate.getUTCMinutes()).padStart(2, '0');
   const period = hours < 12 ? '오전' : '오후';
   const displayHours = hours % 12 || 12;
-  
+
   return `${month}월 ${day}일 ${period} ${String(displayHours).padStart(2, '0')}:${minutes}`;
 }
 
 // 한국시간으로 날짜만 포맷팅
 function formatDate(isoString) {
   const date = new Date(isoString);
-  
-  const month = date.getUTCMonth() + 1;
-  const day = date.getUTCDate();
-  
+
+  // 9시간을 빼서 실제 한국시간으로 변환
+  const koreaDate = new Date(date.getTime() - (9 * 60 * 60 * 1000));
+
+  const month = koreaDate.getUTCMonth() + 1;
+  const day = koreaDate.getUTCDate();
+
   return `${month}월 ${day}일`;
 }
 
 // 한국시간으로 상세 날짜/시간 포맷팅 (YYYY-MM-DD HH:mm:ss)
 function formatDetailDateTime(isoString) {
   const date = new Date(isoString);
-  
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hours = String(date.getUTCHours()).padStart(2, '0');
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
-  
+
+  // 9시간을 빼서 실제 한국시간으로 변환
+  const koreaDate = new Date(date.getTime() - (9 * 60 * 60 * 1000));
+
+  const year = koreaDate.getUTCFullYear();
+  const month = String(koreaDate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(koreaDate.getUTCDate()).padStart(2, '0');
+  const hours = String(koreaDate.getUTCHours()).padStart(2, '0');
+  const minutes = String(koreaDate.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(koreaDate.getUTCSeconds()).padStart(2, '0');
+
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 

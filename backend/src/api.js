@@ -73,11 +73,11 @@ app.get('/api/stats', (req, res) => {
 
 // 측정 결과 조회 API
 app.get('/api/measurements', (req, res) => {
-  const limit = req.query.limit || 1000;
-  
+  const limit = req.query.limit || 10000;  // 기본 10000개로 증가
+
   db.all(
-    `SELECT * FROM measurements 
-     ORDER BY measured_at DESC 
+    `SELECT * FROM measurements
+     ORDER BY measured_at DESC
      LIMIT ?`,
     [limit],
     (err, rows) => {
