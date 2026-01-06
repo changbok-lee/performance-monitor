@@ -249,11 +249,53 @@
                 <th style="width: 180px;">URL</th>
                 <th style="width: 100px;">사이트명</th>
                 <th style="width: 100px;">페이지상세</th>
-                <th style="width: 90px;">Performance</th>
-                <th style="width: 80px;">상태</th>
-                <th style="width: 70px;">FCP</th>
-                <th style="width: 70px;">LCP</th>
-                <th style="width: 70px;">TBT</th>
+                <th style="width: 90px;">
+                  <span class="tooltip-header">
+                    Performance
+                    <span class="tooltip-text">
+                      <strong>Performance Score</strong>
+                      Google Lighthouse 성능 점수 (0-100점). 페이지 로딩 속도와 사용자 경험을 종합 평가합니다.
+                    </span>
+                  </span>
+                </th>
+                <th style="width: 80px;">
+                  <span class="tooltip-header">
+                    상태
+                    <span class="tooltip-text">
+                      <strong>Performance Status</strong>
+                      Good (90-100점): 우수<br>
+                      Needs Improvement (50-89점): 개선 필요<br>
+                      Poor (0-49점): 나쁨
+                    </span>
+                  </span>
+                </th>
+                <th style="width: 70px;">
+                  <span class="tooltip-header">
+                    FCP
+                    <span class="tooltip-text">
+                      <strong>First Contentful Paint</strong>
+                      첫 콘텐츠가 화면에 표시되는 시간. 사용자가 페이지 로딩을 체감하는 첫 순간입니다. (좋음: 1.8초 이하)
+                    </span>
+                  </span>
+                </th>
+                <th style="width: 70px;">
+                  <span class="tooltip-header">
+                    LCP
+                    <span class="tooltip-text">
+                      <strong>Largest Contentful Paint</strong>
+                      가장 큰 콘텐츠가 화면에 표시되는 시간. 페이지의 주요 콘텐츠 로딩 속도를 나타냅니다. (좋음: 2.5초 이하)
+                    </span>
+                  </span>
+                </th>
+                <th style="width: 70px;">
+                  <span class="tooltip-header">
+                    TBT
+                    <span class="tooltip-text">
+                      <strong>Total Blocking Time</strong>
+                      메인 스레드가 차단된 총 시간(ms). JavaScript 실행으로 인한 페이지 반응 지연을 측정합니다. (좋음: 200ms 이하)
+                    </span>
+                  </span>
+                </th>
                 <th style="width: 90px;">상세보기</th>
                 <th style="width: 70px;">측정횟수</th>
               </tr>
@@ -366,12 +408,62 @@
                   <tr>
                     <th>번호</th>
                     <th>측정일시</th>
-                    <th>Performance</th>
-                    <th>상태</th>
-                    <th>FCP</th>
-                    <th>LCP</th>
-                    <th>TBT</th>
-                    <th>Speed Index</th>
+                    <th>
+                      <span class="tooltip-header">
+                        Performance
+                        <span class="tooltip-text">
+                          <strong>Performance Score</strong>
+                          Google Lighthouse 성능 점수 (0-100점). 페이지 로딩 속도와 사용자 경험을 종합 평가합니다.
+                        </span>
+                      </span>
+                    </th>
+                    <th>
+                      <span class="tooltip-header">
+                        상태
+                        <span class="tooltip-text">
+                          <strong>Performance Status</strong>
+                          Good (90-100점): 우수<br>
+                          Needs Improvement (50-89점): 개선 필요<br>
+                          Poor (0-49점): 나쁨
+                        </span>
+                      </span>
+                    </th>
+                    <th>
+                      <span class="tooltip-header">
+                        FCP
+                        <span class="tooltip-text">
+                          <strong>First Contentful Paint</strong>
+                          첫 콘텐츠가 화면에 표시되는 시간. 사용자가 페이지 로딩을 체감하는 첫 순간입니다. (좋음: 1.8초 이하)
+                        </span>
+                      </span>
+                    </th>
+                    <th>
+                      <span class="tooltip-header">
+                        LCP
+                        <span class="tooltip-text">
+                          <strong>Largest Contentful Paint</strong>
+                          가장 큰 콘텐츠가 화면에 표시되는 시간. 페이지의 주요 콘텐츠 로딩 속도를 나타냅니다. (좋음: 2.5초 이하)
+                        </span>
+                      </span>
+                    </th>
+                    <th>
+                      <span class="tooltip-header">
+                        TBT
+                        <span class="tooltip-text">
+                          <strong>Total Blocking Time</strong>
+                          메인 스레드가 차단된 총 시간(ms). JavaScript 실행으로 인한 페이지 반응 지연을 측정합니다. (좋음: 200ms 이하)
+                        </span>
+                      </span>
+                    </th>
+                    <th>
+                      <span class="tooltip-header">
+                        Speed Index
+                        <span class="tooltip-text">
+                          <strong>Speed Index</strong>
+                          페이지 콘텐츠가 얼마나 빨리 시각적으로 표시되는지 측정합니다. 낮을수록 좋습니다. (좋음: 3.4초 이하)
+                        </span>
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody id="historyTableBody">
