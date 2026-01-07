@@ -25,9 +25,9 @@ function parseToKoreaTime(isoString) {
 function formatDateTime(isoString) {
   const date = new Date(isoString);
 
-  // DB에 저장된 시간은 한국시간 기준 ISO 문자열 (UTC+9)
-  // UTC로 파싱하면 9시간이 더해지므로, 9시간을 빼야 실제 한국시간
-  const koreaDate = new Date(date.getTime() - (9 * 60 * 60 * 1000));
+  // DB에 저장된 시간은 UTC 시간
+  // 9시간을 더해서 한국시간으로 변환
+  const koreaDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
 
   const month = koreaDate.getUTCMonth() + 1;
   const day = koreaDate.getUTCDate();
@@ -43,8 +43,8 @@ function formatDateTime(isoString) {
 function formatDate(isoString) {
   const date = new Date(isoString);
 
-  // 9시간을 빼서 실제 한국시간으로 변환
-  const koreaDate = new Date(date.getTime() - (9 * 60 * 60 * 1000));
+  // 9시간을 더해서 한국시간으로 변환
+  const koreaDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
 
   const month = koreaDate.getUTCMonth() + 1;
   const day = koreaDate.getUTCDate();
@@ -56,8 +56,8 @@ function formatDate(isoString) {
 function formatDetailDateTime(isoString) {
   const date = new Date(isoString);
 
-  // 9시간을 빼서 실제 한국시간으로 변환
-  const koreaDate = new Date(date.getTime() - (9 * 60 * 60 * 1000));
+  // 9시간을 더해서 한국시간으로 변환
+  const koreaDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
 
   const year = koreaDate.getUTCFullYear();
   const month = String(koreaDate.getUTCMonth() + 1).padStart(2, '0');

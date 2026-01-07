@@ -1,12 +1,11 @@
 const axios = require('axios');
 
-// ==================== 한국시간 유틸리티 ====================
+// ==================== 시간 유틸리티 ====================
 
-function getKoreaTime() {
-  // 현재 시간에 9시간 추가 (UTC+9)
-  const now = new Date();
-  const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
-  return koreaTime.toISOString();
+function getCurrentTime() {
+  // UTC 시간을 그대로 ISO 문자열로 반환
+  // 프론트엔드에서 한국시간으로 변환하여 표시
+  return new Date().toISOString();
 }
 
 function getKoreaDateTimeString() {
@@ -198,7 +197,7 @@ async function measurePageSpeed(url, network = 'Mobile') {
     const result = {
       url: url,
       network: network,
-      measured_at: getKoreaTime(),  // 한국시간 기준 ISO 문자열
+      measured_at: getCurrentTime(),  // UTC 시간 ISO 문자열 (프론트엔드에서 한국시간으로 표시)
       performance_score: performanceScore,
       status: status,
       fcp: metrics.fcp,
