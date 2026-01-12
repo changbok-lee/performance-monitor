@@ -261,14 +261,16 @@ function displayPerformanceTrend(measurements) {
     const grouped = {};
     data.forEach(m => {
       const date = new Date(m.measured_at);
-      const dateKey = date.toISOString().split('T')[0];
-      
+      // 한국시간 기준으로 날짜 그룹핑 (UTC + 9시간)
+      const koreaDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+      const dateKey = koreaDate.toISOString().split('T')[0];
+
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
       }
       grouped[dateKey].push(m.performance_score);
     });
-    
+
     return Object.keys(grouped)
       .sort()
       .map(date => ({
