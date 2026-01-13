@@ -85,25 +85,22 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "GitHub Actions"
-          
-          echo "📥 Pulling latest changes..."
-          git pull --rebase origin main || git pull origin main || echo "Pull completed with warnings"
-          
+
           echo "📊 Adding database changes..."
           git add backend/database/performance.db
-          
+
           if git diff --staged --quiet; then
             echo "ℹ️  No changes to commit"
           else
             echo "💾 Committing changes..."
             COMMIT_MSG="Auto-update: ${{ steps.network.outputs.type }} measurement $(date +'%Y-%m-%d %H:%M:%S')"
             git commit -m "$COMMIT_MSG"
-            
+
             echo "📤 Pushing changes with retry logic..."
             MAX_RETRIES=5
             RETRY_COUNT=0
             PUSH_SUCCESS=false
-            
+
             while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$PUSH_SUCCESS" = false ]; do
               if git push origin main; then
                 echo "✅ Successfully pushed on attempt $((RETRY_COUNT + 1))"
@@ -112,8 +109,24 @@ jobs:
                 RETRY_COUNT=$((RETRY_COUNT + 1))
                 if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
                   echo "⚠️  Push failed, retrying ($RETRY_COUNT/$MAX_RETRIES)..."
-                  echo "📥 Pulling latest changes before retry..."
-                  git pull --rebase origin main || git pull origin main || echo "Pull completed with warnings"
+                  echo "📥 Fetching latest changes..."
+
+                  # Abort any ongoing rebase/merge
+                  git rebase --abort 2>/dev/null || true
+                  git merge --abort 2>/dev/null || true
+
+                  # Fetch remote changes
+                  git fetch origin main
+
+                  # Soft reset to remote, keeping local changes staged
+                  git reset --soft origin/main
+
+                  # Re-add DB file (now includes both runs)
+                  git add backend/database/performance.db
+
+                  # Re-commit with same message
+                  git commit -m "$COMMIT_MSG" || echo "Already committed"
+
                   sleep 5
                 else
                   echo "❌ Failed to push after $MAX_RETRIES attempts"
