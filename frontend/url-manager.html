@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>URL 관리 - 성능 모니터링</title>
   <link rel="stylesheet" href="css/style.css">
+  <script src="js/auth.js"></script>
+  <script>
+    (async function() {
+      const isValid = await Auth.requireAuth();
+      if (!isValid) return;
+    })();
+  </script>
 </head>
 <body>
   <div class="container">
@@ -13,6 +20,7 @@
       <nav>
         <a href="index.html">📊 대시보드</a>
         <a href="url-manager.html" class="active">⚙️ URL 관리</a>
+        <button onclick="Auth.logout()" class="btn btn-secondary" style="margin-left: auto;">🚪 로그아웃</button>
       </nav>
     </header>
 

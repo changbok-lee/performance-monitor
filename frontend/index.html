@@ -6,6 +6,14 @@
   <title>아임웹 고객사 FO 속도 성능 모니터링 대시보드</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // 인증 체크
+    (async function() {
+      const isValid = await Auth.requireAuth();
+      if (!isValid) return;
+    })();
+  </script>
 </head>
 <body>
 
@@ -45,6 +53,9 @@
         </button>
         <button onclick="clearAllMeasurements()" class="btn btn-measure btn-danger">
             🗑️ 측정 결과 초기화
+        </button>
+        <button onclick="Auth.logout()" class="btn btn-measure" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3);">
+            🚪 로그아웃
         </button>
         </nav>
     </div>
