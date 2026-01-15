@@ -30,6 +30,7 @@ async function supabaseRequest(endpoint, options = {}) {
     'apikey': SUPABASE_KEY,
     'Authorization': `Bearer ${SUPABASE_KEY}`,
     'Content-Type': 'application/json',
+    'Range': '0-9999',  // Supabase 1000개 제한 우회
   };
 
   if (count) headers['Prefer'] = 'count=exact';
