@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000/api';
+// auth.js에서 API_BASE, getAuthHeaders 사용
 
 let allMeasurements = [];
 let currentFilter = 'all';
@@ -85,7 +85,9 @@ async function loadDashboard() {
   try {
     showLoading();
     
-    const response = await fetch(`${API_BASE}/measurements`);
+    const response = await fetch(`${API_BASE}/measurements`, {
+      headers: getAuthHeaders()
+    });
     if (!response.ok) {
       throw new Error('데이터를 불러오는데 실패했습니다.');
     }
@@ -888,7 +890,8 @@ async function startMeasurement(network = 'all') {
     const response = await fetch(`${API_BASE}/measure`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
       },
       body: JSON.stringify({ network: network })
     });
@@ -922,7 +925,9 @@ async function monitorMeasurementProgress(totalUrls) {
   
   measurementCheckInterval = setInterval(async () => {
     try {
-      const response = await fetch(`${API_BASE}/measurement-status`);
+      const response = await fetch(`${API_BASE}/measurement-status`, {
+        headers: getAuthHeaders()
+      });
       const status = await response.json();
       
       console.log('측정 상태:', status);

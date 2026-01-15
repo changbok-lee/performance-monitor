@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000/api';
+// auth.js에서 API_BASE, getAuthHeaders 사용
 
 let parsedData = [];
 
@@ -106,7 +106,10 @@ async function saveUrls() {
   try {
     const response = await fetch(`${API_BASE}/urls/bulk`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
       body: JSON.stringify({ urls: parsedData })
     });
 
@@ -135,7 +138,9 @@ async function saveUrls() {
 
 async function loadUrls() {
   try {
-    const response = await fetch(`${API_BASE}/urls`);
+    const response = await fetch(`${API_BASE}/urls`, {
+      headers: getAuthHeaders()
+    });
     const data = await response.json();
 
     displayUrls(data.urls);
@@ -213,7 +218,8 @@ async function deleteUrl(id) {
 
   try {
     const response = await fetch(`${API_BASE}/urls/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getAuthHeaders()
     });
 
     const result = await response.json();
@@ -237,7 +243,8 @@ async function deleteAllUrls() {
 
   try {
     const response = await fetch(`${API_BASE}/urls`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getAuthHeaders()
     });
 
     const result = await response.json();
