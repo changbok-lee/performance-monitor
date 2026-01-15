@@ -1,6 +1,47 @@
-const db = require('./src/database');
+require('dotenv').config();
 const { measurePageSpeed } = require('./src/pagespeed');
 const fs = require('fs');
+
+// ==================== Supabase 설정 ====================
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error('❌ SUPABASE_URL 또는 SUPABASE_KEY 환경 변수가 설정되지 않았습니다.');
+  process.exit(1);
+}
+
+async function supabaseRequest(endpoint, options = {}) {
+  const { method = 'GET', body, select, filters = '' } = options;
+
+  let url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+  if (select) url += `?select=${select}`;
+  if (filters) url += (select ? '&' : '?') + filters;
+
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': method === 'POST' ? 'return=representation' : 'return=minimal'
+  };
+
+  const response = await fetch(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Supabase 오류: ${response.status} - ${error}`);
+  }
+
+  if (method === 'POST' || method === 'GET') {
+    return await response.json();
+  }
+  return { success: true };
+}
 
 // ==================== 한국시간 유틸리티 ====================
 
@@ -16,7 +57,7 @@ function getKoreaTimeString() {
   const hours = koreaTime.getUTCHours();
   const minutes = String(koreaTime.getUTCMinutes()).padStart(2, '0');
   const seconds = String(koreaTime.getUTCSeconds()).padStart(2, '0');
-  
+
   return `${year}. ${month}. ${day}. 오후 ${hours}:${minutes}:${seconds}`;
 }
 
@@ -44,45 +85,29 @@ function loadUrls() {
   }
 }
 
-// ==================== 측정 결과 저장 ====================
+// ==================== 측정 결과 저장 (Supabase) ====================
 
-function saveMeasurement(result) {
-  return new Promise((resolve, reject) => {
-    const stmt = db.prepare(`
-      INSERT INTO measurements (
-        url, site_name, page_detail, network,
-        measured_at, performance_score, status,
-        fcp, lcp, tbt, cls, speed_index, tti,
-        measurement_time, issues, suggestions
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    stmt.run(
-      result.url,
-      result.site_name || null,
-      result.page_detail || null,
-      result.network,
-      result.measured_at,
-      result.performance_score,
-      result.status,
-      result.fcp,
-      result.lcp,
-      result.tbt,
-      result.cls,
-      result.speed_index,
-      result.tti,
-      result.measurement_time,
-      result.issues,
-      result.suggestions,
-      (err) => {
-        stmt.finalize();
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      }
-    );
+async function saveMeasurement(result) {
+  await supabaseRequest('measurements', {
+    method: 'POST',
+    body: {
+      url: result.url,
+      site_name: result.site_name || null,
+      page_detail: result.page_detail || null,
+      network: result.network,
+      measured_at: result.measured_at,
+      performance_score: result.performance_score,
+      status: result.status,
+      fcp: result.fcp,
+      lcp: result.lcp,
+      tbt: result.tbt,
+      cls: result.cls,
+      speed_index: result.speed_index,
+      tti: result.tti,
+      measurement_time: result.measurement_time,
+      issues: result.issues,
+      suggestions: result.suggestions
+    }
   });
 }
 
@@ -112,6 +137,7 @@ async function runMeasurements() {
   console.log(`\n${'='.repeat(80)}`);
   console.log(`📊 예약된 측정 시작 (한국시간): ${getKoreaTimeString()}`);
   console.log(`📡 네트워크 타입: ${NETWORK_TYPE}`);
+  console.log(`💾 저장소: Supabase`);
   console.log(`${'='.repeat(80)}\n`);
 
   measurementStatus.isRunning = true;
@@ -196,21 +222,13 @@ async function runMeasurements() {
   console.log(`\n${'='.repeat(80)}`);
   console.log(`✅ 측정 완료 (한국시간): ${getKoreaTimeString()}`);
   console.log(`📊 결과: 성공 ${completed}개, 실패 ${failed}개 / 전체 ${urls.length}개`);
+  console.log(`💾 Supabase에 저장 완료`);
 
   if (failed > 0) {
     console.log(`⚠️  일부 URL 측정 실패 (${failed}개) - 실패한 URL은 대시보드에서 확인 가능`);
   }
 
   console.log(`${'='.repeat(80)}\n`);
-
-  // 데이터베이스 연결 종료
-  db.close((err) => {
-    if (err) {
-      console.error('DB 종료 중 오류:', err.message);
-    } else {
-      console.log('✅ DB 연결 종료');
-    }
-  });
 
   // ✅ 일부 실패가 있어도 성공으로 처리 (최소 1개 이상 성공하면 OK)
   // 전체 실패만 exit code 1
@@ -234,7 +252,6 @@ process.on('unhandledRejection', (error) => {
 process.on('SIGINT', () => {
   console.log('\n⚠️ 측정 중단됨');
   measurementStatus.isRunning = false;
-  db.close();
   process.exit(0);
 });
 

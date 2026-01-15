@@ -25,9 +25,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -49,10 +46,7 @@ jobs:
           else
             # 스케줄 실행 시 시간 기반 자동 결정
             HOUR=$(date -u +%H)
-            MINUTE=$(date -u +%M)
 
-            # GitHub Actions cron 지연을 고려한 시간 기반 분기
-            # 1.5시간 간격으로 충분한 여유를 두어 안정적으로 구분
             if [ "$HOUR" == "16" ]; then
               echo "type=Mobile" >> $GITHUB_OUTPUT
               echo "📱 Scheduled execution: Mobile (UTC 16:00)"
@@ -70,71 +64,19 @@ jobs:
           echo "🚀 Starting ${{ steps.network.outputs.type }} measurement"
           echo "📅 Time: $(date +'%Y-%m-%d %H:%M:%S %Z')"
           echo "🔄 Trigger: ${{ github.event_name }}"
+          echo "💾 Storage: Supabase"
           echo "⏱️  Timeout: 300 minutes"
 
       - name: Run measurement
         timeout-minutes: 300
         env:
           PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           NETWORK_TYPE: ${{ steps.network.outputs.type }}
         run: |
           cd backend
           node run-measurement.js
-
-      - name: Commit and push results
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "GitHub Actions"
-
-          echo "📊 Adding database changes..."
-          git add backend/database/performance.db
-
-          if git diff --staged --quiet; then
-            echo "ℹ️  No changes to commit"
-          else
-            echo "💾 Committing changes..."
-            COMMIT_MSG="Auto-update: ${{ steps.network.outputs.type }} measurement $(date +'%Y-%m-%d %H:%M:%S')"
-            git commit -m "$COMMIT_MSG"
-
-            echo "📤 Pushing changes with retry logic..."
-            MAX_RETRIES=5
-            RETRY_COUNT=0
-            PUSH_SUCCESS=false
-
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$PUSH_SUCCESS" = false ]; do
-              if git push origin main; then
-                echo "✅ Successfully pushed on attempt $((RETRY_COUNT + 1))"
-                PUSH_SUCCESS=true
-              else
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                  echo "⚠️  Push failed, retrying ($RETRY_COUNT/$MAX_RETRIES)..."
-                  echo "📥 Fetching latest changes..."
-
-                  # Abort any ongoing rebase/merge
-                  git rebase --abort 2>/dev/null || true
-                  git merge --abort 2>/dev/null || true
-
-                  # Fetch remote changes
-                  git fetch origin main
-
-                  # Soft reset to remote, keeping local changes staged
-                  git reset --soft origin/main
-
-                  # Re-add DB file (now includes both runs)
-                  git add backend/database/performance.db
-
-                  # Re-commit with same message
-                  git commit -m "$COMMIT_MSG" || echo "Already committed"
-
-                  sleep 5
-                else
-                  echo "❌ Failed to push after $MAX_RETRIES attempts"
-                  exit 1
-                fi
-              fi
-            done
-          fi
 
       - name: Summary
         if: always()
@@ -144,19 +86,14 @@ jobs:
           echo "- **Network:** ${{ steps.network.outputs.type }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Time:** $(date +'%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Storage:** Supabase (Cloud DB)" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          
-          if [ -f backend/database/performance.db ]; then
-            DB_SIZE=$(du -h backend/database/performance.db | cut -f1)
-            RECORD_COUNT=$(sqlite3 backend/database/performance.db "SELECT COUNT(*) FROM measurements;")
-            echo "- **Database Size:** $DB_SIZE" >> $GITHUB_STEP_SUMMARY
-            echo "- **Total Records:** $RECORD_COUNT" >> $GITHUB_STEP_SUMMARY
-          fi
-          
+          echo "" >> $GITHUB_STEP_SUMMARY
+
           if [ "${{ job.status }}" == "success" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
             echo "✅ **Measurement completed successfully!**" >> $GITHUB_STEP_SUMMARY
-          else
             echo "" >> $GITHUB_STEP_SUMMARY
+            echo "데이터가 Supabase에 자동 저장되었습니다. 대시보드에서 새로고침하면 확인 가능합니다." >> $GITHUB_STEP_SUMMARY
+          else
             echo "❌ **Measurement failed. Check logs for details.**" >> $GITHUB_STEP_SUMMARY
           fi
