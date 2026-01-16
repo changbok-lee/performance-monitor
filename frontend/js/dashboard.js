@@ -151,6 +151,7 @@ async function loadDashboard() {
     displayStatusDistribution(allMeasurements);
     displayNetworkComparison(allMeasurements);
     displayPerformanceTrend(allMeasurements);
+    renderPageComparison(allMeasurements);
     displayMeasurements(allMeasurements, currentNetworkTab);
     populateFilters(allMeasurements);
     
@@ -1210,6 +1211,201 @@ async function showLoginHistory() {
 
 function closeLoginHistoryModal() {
   document.getElementById('loginHistoryModal').style.display = 'none';
+}
+
+// ==================== 페이지상세별 성능 평균 비교 ====================
+
+function renderPageComparison(measurements) {
+  const container = document.getElementById('pageComparisonContainer');
+  if (!container) return;
+
+  // 페이지상세 순서 정의 (홈 / 상품목록 / 상품상세)
+  const pageDetailOrder = ['홈', '상품목록', '상품상세'];
+
+  // 모바일/데스크탑 데이터 분리
+  const mobileData = measurements.filter(m => m.network === 'Mobile');
+  const desktopData = measurements.filter(m => m.network === 'Desktop');
+
+  // 5G 예상값 계산
+  const mobile5GData = convertTo5G(mobileData);
+
+  // 페이지상세별로 데이터 그룹화
+  const pageDetailStats = {};
+
+  // 모든 페이지상세 수집
+  const allPageDetails = new Set([
+    ...mobileData.map(m => m.page_detail),
+    ...desktopData.map(m => m.page_detail)
+  ].filter(Boolean));
+
+  // 정의된 순서대로 정렬, 나머지는 알파벳순
+  const sortedPageDetails = [...allPageDetails].sort((a, b) => {
+    const aIdx = pageDetailOrder.indexOf(a);
+    const bIdx = pageDetailOrder.indexOf(b);
+    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+    if (aIdx !== -1) return -1;
+    if (bIdx !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
+  // 각 페이지상세별 통계 계산
+  sortedPageDetails.forEach(pageDetail => {
+    const mobileMeasurements = mobileData.filter(m => m.page_detail === pageDetail);
+    const mobile5GMeasurements = mobile5GData.filter(m => m.page_detail === pageDetail);
+    const desktopMeasurements = desktopData.filter(m => m.page_detail === pageDetail);
+
+    pageDetailStats[pageDetail] = {
+      mobile: calculateNetworkStats(mobileMeasurements),
+      mobile5G: calculateNetworkStats(mobile5GMeasurements),
+      desktop: calculateNetworkStats(desktopMeasurements)
+    };
+  });
+
+  // HTML 렌더링
+  if (sortedPageDetails.length === 0) {
+    container.innerHTML = '<div class="no-data-msg">데이터가 없습니다.</div>';
+    return;
+  }
+
+  container.innerHTML = sortedPageDetails.map(pageDetail => {
+    const stats = pageDetailStats[pageDetail];
+    return renderPageTypeCard(pageDetail, stats);
+  }).join('');
+}
+
+function calculateNetworkStats(measurements) {
+  if (!measurements || measurements.length === 0) {
+    return { avg: null, top3: [], bottom3: [] };
+  }
+
+  // 사이트명별 평균 계산
+  const siteStats = {};
+  measurements.forEach(m => {
+    const siteName = m.site_name || '(이름없음)';
+    if (!siteStats[siteName]) {
+      siteStats[siteName] = { scores: [], url: m.url };
+    }
+    if (m.performance_score > 0) {
+      siteStats[siteName].scores.push(m.performance_score);
+    }
+  });
+
+  // 사이트별 평균 점수 계산
+  const siteAvgList = Object.entries(siteStats)
+    .map(([name, data]) => ({
+      name,
+      url: data.url,
+      avgScore: data.scores.length > 0
+        ? Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length)
+        : 0
+    }))
+    .filter(s => s.avgScore > 0)
+    .sort((a, b) => b.avgScore - a.avgScore);
+
+  // 전체 평균
+  const allScores = measurements.map(m => m.performance_score).filter(s => s > 0);
+  const avg = allScores.length > 0
+    ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+    : null;
+
+  return {
+    avg,
+    top3: siteAvgList.slice(0, 3),
+    bottom3: siteAvgList.slice(-3).reverse()
+  };
+}
+
+function renderPageTypeCard(pageDetail, stats) {
+  const mobileAvg = stats.mobile.avg;
+  const mobile5GAvg = stats.mobile5G.avg;
+  const desktopAvg = stats.desktop.avg;
+
+  return `
+    <div class="page-type-card">
+      <div class="page-type-header">
+        <h3>${pageDetail}</h3>
+      </div>
+
+      <!-- 점수 카드 -->
+      <div class="score-cards-row">
+        ${renderScoreCard('📱 모바일', mobileAvg, 'Slow 4G')}
+        ${renderScoreCard('📱 모바일 5G', mobile5GAvg, '5G 예상')}
+        ${renderScoreCard('💻 데스크탑', desktopAvg, 'Cable 100Mbps')}
+      </div>
+
+      <!-- 사이트 랭킹 -->
+      <div class="site-rankings">
+        <div class="ranking-column mobile">
+          <h4>📱 모바일</h4>
+          ${renderRankingGroup('good', stats.mobile.top3)}
+          ${renderRankingGroup('poor', stats.mobile.bottom3)}
+        </div>
+        <div class="ranking-column desktop">
+          <h4>💻 데스크탑</h4>
+          ${renderRankingGroup('good', stats.desktop.top3)}
+          ${renderRankingGroup('poor', stats.desktop.bottom3)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderScoreCard(label, score, sublabel) {
+  const scoreClass = getScoreClass(score);
+  const bgClass = getScoreBgClass(score);
+  const displayScore = score !== null ? score : '-';
+
+  return `
+    <div class="score-card ${bgClass}">
+      <div class="score-card-header">${label}</div>
+      <div class="score-card-value ${scoreClass}">${displayScore}</div>
+      <div class="score-card-label">${sublabel}</div>
+    </div>
+  `;
+}
+
+function renderRankingGroup(type, sites) {
+  const isGood = type === 'good';
+  const label = isGood ? '🏆 우수' : '⚠️ 개선필요';
+
+  if (!sites || sites.length === 0) {
+    return `
+      <div class="ranking-group">
+        <div class="ranking-label ${type}">${label}</div>
+        <div class="ranking-sites">
+          <span class="no-data-msg">데이터 없음</span>
+        </div>
+      </div>
+    `;
+  }
+
+  const badges = sites.map(site => `
+    <a href="${site.url}" target="_blank" class="site-badge ${type}" title="${site.url}">
+      ${site.name}
+      <span class="site-score">(${site.avgScore})</span>
+    </a>
+  `).join('');
+
+  return `
+    <div class="ranking-group">
+      <div class="ranking-label ${type}">${label}</div>
+      <div class="ranking-sites">${badges}</div>
+    </div>
+  `;
+}
+
+function getScoreClass(score) {
+  if (score === null) return '';
+  if (score >= 90) return 'score-good';
+  if (score >= 50) return 'score-warning';
+  return 'score-poor';
+}
+
+function getScoreBgClass(score) {
+  if (score === null) return '';
+  if (score >= 90) return 'score-bg-good';
+  if (score >= 50) return 'score-bg-warning';
+  return 'score-bg-poor';
 }
 
 // ==================== 초기화 ====================
