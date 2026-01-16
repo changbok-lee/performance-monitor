@@ -8,11 +8,13 @@ const API_BASE = window.location.hostname === 'localhost'
 // 토큰 키 이름
 const TOKEN_KEY = 'imweb_perf_token';
 const EMAIL_KEY = 'imweb_perf_email';
+const ADMIN_KEY = 'imweb_perf_admin';
 
 // 토큰 저장
-function saveToken(token, email) {
+function saveToken(token, email, isAdmin = false) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(EMAIL_KEY, email);
+  localStorage.setItem(ADMIN_KEY, isAdmin ? 'true' : 'false');
 }
 
 // 토큰 가져오기
@@ -29,6 +31,12 @@ function getEmail() {
 function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(EMAIL_KEY);
+  localStorage.removeItem(ADMIN_KEY);
+}
+
+// 관리자 여부 확인
+function isAdmin() {
+  return localStorage.getItem(ADMIN_KEY) === 'true';
 }
 
 // 로그인 상태 확인
@@ -104,6 +112,22 @@ function logout() {
   window.location.href = '/login.html';
 }
 
+// 접속 기록 조회 (관리자 전용)
+async function getLoginHistory() {
+  try {
+    const response = await fetch(`${API_BASE}/login-history`, {
+      headers: getAuthHeaders()
+    });
+    if (!response.ok) {
+      throw new Error('접속 기록 조회 실패');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('접속 기록 조회 실패:', error);
+    return [];
+  }
+}
+
 // 전역 객체로 export
 window.Auth = {
   API_BASE,
@@ -111,10 +135,12 @@ window.Auth = {
   getToken,
   getEmail,
   clearToken,
+  isAdmin,
   isLoggedIn,
   getAuthHeaders,
   authFetch,
   verifyToken,
   requireAuth,
-  logout
+  logout,
+  getLoginHistory
 };

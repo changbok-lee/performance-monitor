@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'imweb-performance-monitor-secret-key-2024';
 const SHARED_PASSWORD = process.env.SHARED_PASSWORD || 'qaai1234@!';
 const ALLOWED_DOMAIN = '@imweb.me';
+const ADMIN_EMAIL = 'changbok.lee@imweb.me';
 
 const app = express();
 app.use(cors());
@@ -109,7 +110,7 @@ function authMiddleware(req, res, next) {
 
 // ==================== Auth Routes ====================
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email) return res.status(400).json({ success: false, error: '이메일을 입력해주세요.' });
@@ -122,11 +123,53 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   const token = generateToken(email);
-  res.json({ success: true, token, email, message: '로그인 성공' });
+
+  // 로그인 기록 저장
+  try {
+    const userAgent = req.headers['user-agent'] || '';
+    const ip = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
+    await supabaseRequest('login_history', {
+      method: 'POST',
+      body: { email: email.toLowerCase(), ip_address: ip, user_agent: userAgent }
+    });
+  } catch (err) {
+    console.error('로그인 기록 저장 실패:', err);
+  }
+
+  const isAdmin = email.toLowerCase() === ADMIN_EMAIL;
+  res.json({ success: true, token, email, isAdmin, message: '로그인 성공' });
 });
 
 app.get('/api/auth/verify', authMiddleware, (req, res) => {
-  res.json({ success: true, email: req.user.email });
+  const isAdmin = req.user.email.toLowerCase() === ADMIN_EMAIL;
+  res.json({ success: true, email: req.user.email, isAdmin });
+});
+
+// 접속 기록 조회 (관리자 전용)
+app.get('/api/login-history', authMiddleware, async (req, res) => {
+  // 관리자만 조회 가능
+  if (req.user.email.toLowerCase() !== ADMIN_EMAIL) {
+    return res.status(403).json({ error: '권한이 없습니다.' });
+  }
+
+  try {
+    // 1개월 이전 기록 삭제
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    await supabaseRequest(`login_history?login_at=lt.${oneMonthAgo.toISOString()}`, {
+      method: 'DELETE'
+    });
+
+    // 최근 기록 조회
+    const history = await supabaseRequest('login_history', {
+      select: '*',
+      filters: 'order=login_at.desc&limit=100'
+    });
+    res.json(history);
+  } catch (err) {
+    console.error('Login history error:', err);
+    res.status(500).json({ error: '접속 기록 조회 실패' });
+  }
 });
 
 // ==================== API Routes ====================

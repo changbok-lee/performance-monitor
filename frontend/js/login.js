@@ -83,9 +83,10 @@ async function handleLogin(e) {
       return;
     }
 
-    // 토큰 저장
+    // 토큰 저장 (isAdmin 포함)
     localStorage.setItem('imweb_perf_token', data.token);
     localStorage.setItem('imweb_perf_email', data.email);
+    localStorage.setItem('imweb_perf_admin', data.isAdmin ? 'true' : 'false');
 
     // 대시보드로 이동
     window.location.href = '/index.html';

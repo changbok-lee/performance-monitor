@@ -1131,8 +1131,54 @@ window.onclick = function(event) {
   // loadingModal은 외부 클릭으로 닫히지 않음
 }
 
+// ==================== 접속 기록 (관리자 전용) ====================
+
+async function showLoginHistory() {
+  const modal = document.getElementById('loginHistoryModal');
+  const tbody = document.getElementById('loginHistoryBody');
+
+  modal.style.display = 'flex';
+  tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center;">로딩 중...</td></tr>';
+
+  try {
+    const history = await Auth.getLoginHistory();
+
+    if (history.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center;">접속 기록이 없습니다.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = history.map(item => {
+      const loginTime = new Date(item.login_at);
+      const koreaTime = new Date(loginTime.getTime() + (9 * 60 * 60 * 1000));
+      const formatted = `${koreaTime.getUTCFullYear()}-${String(koreaTime.getUTCMonth() + 1).padStart(2, '0')}-${String(koreaTime.getUTCDate()).padStart(2, '0')} ${String(koreaTime.getUTCHours()).padStart(2, '0')}:${String(koreaTime.getUTCMinutes()).padStart(2, '0')}`;
+
+      return `
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">${item.email}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formatted}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${item.ip_address || '-'}</td>
+        </tr>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('접속 기록 조회 실패:', error);
+    tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: red;">접속 기록 조회에 실패했습니다.</td></tr>';
+  }
+}
+
+function closeLoginHistoryModal() {
+  document.getElementById('loginHistoryModal').style.display = 'none';
+}
+
 // ==================== 초기화 ====================
 
 document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
+
+  // 관리자면 접속기록 버튼 표시
+  if (Auth.isAdmin()) {
+    const btn = document.getElementById('loginHistoryBtn');
+    if (btn) btn.style.display = 'inline-block';
+  }
 });
