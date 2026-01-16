@@ -14,10 +14,73 @@
       if (!isValid) return;
     })();
   </script>
+  <style>
+    /* 메인 탭 네비게이션 */
+    .main-tabs {
+      display: flex;
+      gap: 0;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 5px;
+      margin-right: auto;
+    }
+
+    .main-tab-btn {
+      padding: 12px 24px;
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,0.8);
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .main-tab-btn:hover {
+      background: rgba(255,255,255,0.15);
+      color: white;
+    }
+
+    .main-tab-btn.active {
+      background: rgba(255,255,255,0.25);
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    /* 탭 컨텐츠 */
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* 헤더 액션 버튼들 */
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* 대시보드 탭의 측정 버튼 숨김 (측정결과 탭에서만 표시) */
+    .measure-buttons {
+      display: none;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .measure-buttons.visible {
+      display: flex;
+    }
+  </style>
 </head>
 <body>
 
-  <!-- ⭐ 로딩 표시 추가 ⭐ -->
+  <!-- 로딩 표시 -->
   <div id="loading" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 9999; justify-content: center; align-items: center;">
     <div style="text-align: center;">
       <div class="spinner" style="
@@ -38,294 +101,400 @@
   <div class="container">
     <header>
     <div class="header-content">
-        <h1>📊 아임웹 고객사 FO 속도 성능 모니터링 대시보드</h1>
+        <h1>📊 아임웹 고객사 FO 속도 성능 모니터링</h1>
         <nav>
-        <a href="index.html" class="nav-link active">📊 대시보드</a>
-        <a href="url-manager.html" class="nav-link">⚙️ URL 관리</a>
-        <button onclick="startMeasurement('all')" class="btn btn-measure btn-all">
-            🚀 전체 측정
-        </button>
-        <button onclick="startMeasurement('Mobile')" class="btn btn-measure btn-mobile">
-            📱 Mobile 측정
-        </button>
-        <button onclick="startMeasurement('Desktop')" class="btn btn-measure btn-desktop">
-            💻 Desktop 측정
-        </button>
-        <button onclick="clearAllMeasurements()" class="btn btn-measure btn-danger">
-            🗑️ 측정 결과 초기화
-        </button>
-        <button id="loginHistoryBtn" onclick="showLoginHistory()" class="btn btn-measure" style="display: none; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3);">
-            📋 접속기록
-        </button>
-        <button onclick="Auth.logout()" class="btn btn-measure" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3);">
-            🚪 로그아웃
-        </button>
+          <!-- 메인 탭 네비게이션 -->
+          <div class="main-tabs">
+            <button class="main-tab-btn active" onclick="switchMainTab('dashboard')">
+              📊 대시보드
+            </button>
+            <button class="main-tab-btn" onclick="switchMainTab('results')">
+              📋 측정결과
+            </button>
+            <button class="main-tab-btn" onclick="switchMainTab('urlmanager')">
+              ⚙️ URL 관리
+            </button>
+          </div>
+
+          <!-- 헤더 액션 버튼들 -->
+          <div class="header-actions">
+            <!-- 측정 버튼 (측정결과 탭에서만 표시) -->
+            <div id="measureButtons" class="measure-buttons">
+              <button onclick="startMeasurement('all')" class="btn btn-measure btn-all">
+                  🚀 전체 측정
+              </button>
+              <button onclick="startMeasurement('Mobile')" class="btn btn-measure btn-mobile">
+                  📱 Mobile
+              </button>
+              <button onclick="startMeasurement('Desktop')" class="btn btn-measure btn-desktop">
+                  💻 Desktop
+              </button>
+            </div>
+
+            <button id="loginHistoryBtn" onclick="showLoginHistory()" class="btn btn-measure" style="display: none; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3);">
+                📋 접속기록
+            </button>
+            <button onclick="Auth.logout()" class="btn btn-measure" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3);">
+                🚪 로그아웃
+            </button>
+          </div>
         </nav>
     </div>
     </header>
 
     <main>
-      <!-- 통합 요약 섹션 -->
-      <section class="unified-summary">
-        <!-- 상단 요약 카드 -->
-        <div class="summary-cards-compact">
-          <div class="card card-blue">
-            <div class="card-icon">📊</div>
-            <div class="card-content">
-              <div class="card-title">전체 평균</div>
-              <div class="card-value" id="avgPerformance">-</div>
-              <div class="card-label">Performance 점수</div>
-            </div>
-          </div>
-
-          <div class="card card-green">
-            <div class="card-icon">✅</div>
-            <div class="card-content">
-              <div class="card-title">Good 비율</div>
-              <div class="card-value" id="goodRate">-</div>
-              <div class="card-label">90점 이상</div>
-            </div>
-          </div>
-
-          <div class="card card-purple" onclick="location.href='url-manager.html'" style="cursor: pointer;">
-            <div class="card-icon">🔗</div>
-            <div class="card-content">
-              <div class="card-title">측정된 URL</div>
-              <div class="card-value" id="totalUrls">-</div>
-              <div class="card-label">개</div>
-            </div>
-          </div>
-
-          <div class="card card-orange" onclick="scrollToResults()" style="cursor: pointer;">
-            <div class="card-icon">📈</div>
-            <div class="card-content">
-              <div class="card-title">총 측정 횟수</div>
-              <div class="card-value" id="totalMeasurements">-</div>
-              <div class="card-label">회</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 하단 통합 정보 -->
-        <div class="summary-bottom">
-          <!-- 상태별 분포 -->
-          <div class="status-section">
-            <h3>📊 상태별 분포</h3>
-            <div class="status-bars-mini">
-              <div class="status-item-mini">
-                <span class="status-label-mini good">✅ Good</span>
-                <span class="status-value-mini" id="goodCount">0개 (0%)</span>
+      <!-- ==================== 대시보드 탭 ==================== -->
+      <div id="tab-dashboard" class="tab-content active">
+        <!-- 통합 요약 섹션 -->
+        <section class="unified-summary">
+          <!-- 상단 요약 카드 -->
+          <div class="summary-cards-compact">
+            <div class="card card-blue">
+              <div class="card-icon">📊</div>
+              <div class="card-content">
+                <div class="card-title">전체 평균</div>
+                <div class="card-value" id="avgPerformance">-</div>
+                <div class="card-label">Performance 점수</div>
               </div>
-              <div class="status-item-mini">
-                <span class="status-label-mini warning">⚠️ Needs Improvement</span>
-                <span class="status-value-mini" id="warningCount">0개 (0%)</span>
+            </div>
+
+            <div class="card card-green">
+              <div class="card-icon">✅</div>
+              <div class="card-content">
+                <div class="card-title">Good 비율</div>
+                <div class="card-value" id="goodRate">-</div>
+                <div class="card-label">90점 이상</div>
               </div>
-              <div class="status-item-mini">
-                <span class="status-label-mini poor">❌ Poor</span>
-                <span class="status-value-mini" id="poorCount">0개 (0%)</span>
+            </div>
+
+            <div class="card card-purple" onclick="switchMainTab('urlmanager')" style="cursor: pointer;">
+              <div class="card-icon">🔗</div>
+              <div class="card-content">
+                <div class="card-title">측정된 URL</div>
+                <div class="card-value" id="totalUrls">-</div>
+                <div class="card-label">개</div>
+              </div>
+            </div>
+
+            <div class="card card-orange" onclick="switchMainTab('results')" style="cursor: pointer;">
+              <div class="card-icon">📈</div>
+              <div class="card-content">
+                <div class="card-title">총 측정 횟수</div>
+                <div class="card-value" id="totalMeasurements">-</div>
+                <div class="card-label">회</div>
               </div>
             </div>
           </div>
 
-        <!-- 네트워크별 비교 -->
-        <div class="network-section">
-        <h3>📱 Mobile vs 💻 Desktop</h3>
-        <p class="network-info">Mobile: Slow 4G (400Kbps) | Desktop: Cable (100Mbps)</p>
-        <div class="network-comparison-mini">
-            <div class="network-card-mini">
-            <h4>📱 Mobile</h4>
-            <div class="network-metrics">
-                <div class="network-metric">
-                <span>Performance</span>
-                <strong id="mobilePerf">-</strong>
+          <!-- 하단 통합 정보 -->
+          <div class="summary-bottom">
+            <!-- 상태별 분포 -->
+            <div class="status-section">
+              <h3>📊 상태별 분포</h3>
+              <div class="status-bars-mini">
+                <div class="status-item-mini">
+                  <span class="status-label-mini good">✅ Good</span>
+                  <span class="status-value-mini" id="goodCount">0개 (0%)</span>
                 </div>
-                <div class="network-metric">
-                <span>FCP</span>
-                <strong id="mobileFcp">-</strong>
+                <div class="status-item-mini">
+                  <span class="status-label-mini warning">⚠️ Needs Improvement</span>
+                  <span class="status-value-mini" id="warningCount">0개 (0%)</span>
                 </div>
-                <div class="network-metric">
-                <span>LCP</span>
-                <strong id="mobileLcp">-</strong>
+                <div class="status-item-mini">
+                  <span class="status-label-mini poor">❌ Poor</span>
+                  <span class="status-value-mini" id="poorCount">0개 (0%)</span>
                 </div>
-            </div>
+              </div>
             </div>
 
-            <div class="network-card-mini">
-            <h4>💻 Desktop</h4>
-            <div class="network-metrics">
-                <div class="network-metric">
-                <span>Performance</span>
-                <strong id="desktopPerf">-</strong>
-                </div>
-                <div class="network-metric">
-                <span>FCP</span>
-                <strong id="desktopFcp">-</strong>
-                </div>
-                <div class="network-metric">
-                <span>LCP</span>
-                <strong id="desktopLcp">-</strong>
-                </div>
-            </div>
-            </div>
-        </div>
-        </div>
-      </section>
+          <!-- 네트워크별 비교 -->
+          <div class="network-section">
+          <h3>📱 Mobile vs 💻 Desktop</h3>
+          <p class="network-info">Mobile: Slow 4G (400Kbps) | Desktop: Cable (100Mbps)</p>
+          <div class="network-comparison-mini">
+              <div class="network-card-mini">
+              <h4>📱 Mobile</h4>
+              <div class="network-metrics">
+                  <div class="network-metric">
+                  <span>Performance</span>
+                  <strong id="mobilePerf">-</strong>
+                  </div>
+                  <div class="network-metric">
+                  <span>FCP</span>
+                  <strong id="mobileFcp">-</strong>
+                  </div>
+                  <div class="network-metric">
+                  <span>LCP</span>
+                  <strong id="mobileLcp">-</strong>
+                  </div>
+              </div>
+              </div>
 
-      <!-- 성능 추이 차트 (180일, Mobile/Desktop 분리) -->
-      <section class="chart-section">
-        <h2>📈 성능 추이 (최근 180일)</h2>
-        <canvas id="performanceChart"></canvas>
-      </section>
+              <div class="network-card-mini">
+              <h4>💻 Desktop</h4>
+              <div class="network-metrics">
+                  <div class="network-metric">
+                  <span>Performance</span>
+                  <strong id="desktopPerf">-</strong>
+                  </div>
+                  <div class="network-metric">
+                  <span>FCP</span>
+                  <strong id="desktopFcp">-</strong>
+                  </div>
+                  <div class="network-metric">
+                  <span>LCP</span>
+                  <strong id="desktopLcp">-</strong>
+                  </div>
+              </div>
+              </div>
+          </div>
+          </div>
+        </section>
 
-      <!-- 최근 측정 결과 (탭 방식) -->
-      <section class="data-table-section" id="resultsSection">
-        <div class="section-header">
-          <h2>📋 최근 측정 결과 (URL별 평균)</h2>
-          <div class="button-group">
-            <button onclick="loadDashboard()" class="btn btn-secondary">
-              🔄 새로고침
+        <!-- 성능 추이 차트 (180일, Mobile/Desktop 분리) -->
+        <section class="chart-section">
+          <h2>📈 성능 추이 (최근 180일)</h2>
+          <canvas id="performanceChart"></canvas>
+        </section>
+      </div>
+
+      <!-- ==================== 측정결과 탭 ==================== -->
+      <div id="tab-results" class="tab-content">
+        <section class="data-table-section" id="resultsSection">
+          <div class="section-header">
+            <h2>📋 측정 결과 (URL별 평균)</h2>
+            <div class="button-group">
+              <button onclick="loadDashboard()" class="btn btn-secondary">
+                🔄 새로고침
+              </button>
+              <button onclick="downloadCSV()" class="btn btn-success">
+                📥 CSV 다운로드
+              </button>
+              <button onclick="show5GExplanationModal()" class="btn btn-info">
+                📱 5G 예상값
+              </button>
+              <button onclick="clearAllMeasurements()" class="btn btn-danger">
+                🗑️ 결과 초기화
+              </button>
+            </div>
+          </div>
+
+          <!-- 네트워크 탭 -->
+          <div class="network-tabs">
+            <button class="tab-btn active" onclick="switchNetworkTab('Mobile')">
+              📱 Mobile (Slow 4G)
             </button>
-            <button onclick="downloadCSV()" class="btn btn-success">
-              📥 CSV 다운로드
+            <button class="tab-btn" onclick="switchNetworkTab('Mobile5G')">
+              📱 Mobile (5G 예상값)
             </button>
-            <button onclick="show5GExplanationModal()" class="btn btn-info">
-              📱 5G 예상값
+            <button class="tab-btn" onclick="switchNetworkTab('Desktop')">
+              💻 Desktop (Cable 100Mbps)
             </button>
           </div>
-        </div>
 
-        <!-- 네트워크 탭 -->
-        <div class="network-tabs">
-          <button class="tab-btn active" onclick="switchNetworkTab('Mobile')">
-            📱 Mobile (Slow 4G)
-          </button>
-          <button class="tab-btn" onclick="switchNetworkTab('Mobile5G')">
-            📱 Mobile (5G 예상값)
-          </button>
-          <button class="tab-btn" onclick="switchNetworkTab('Desktop')">
-            💻 Desktop (Cable 100Mbps)
-          </button>
-        </div>
-
-        <div class="filters-enhanced">
-          <div class="filter-row">
-            <div class="filter-item">
-              <label>사이트명</label>
-              <select id="siteNameFilter">
-                <option value="">전체</option>
-              </select>
-            </div>
-
-            <div class="filter-item">
-              <label>페이지상세</label>
-              <select id="pageDetailFilter">
-                <option value="">전체</option>
-              </select>
-            </div>
-
-            <div class="filter-item">
-              <label>상태</label>
-                <select id="statusFilter">
-                <option value="">전체</option>
-                <option value="Good">✅ 우수</option>
-                <option value="Needs Improvement">⚠️ 보통</option>
-                <option value="Poor">❌ 개선 필요</option>
+          <div class="filters-enhanced">
+            <div class="filter-row">
+              <div class="filter-item">
+                <label>사이트명</label>
+                <select id="siteNameFilter">
+                  <option value="">전체</option>
                 </select>
+              </div>
+
+              <div class="filter-item">
+                <label>페이지상세</label>
+                <select id="pageDetailFilter">
+                  <option value="">전체</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <label>상태</label>
+                  <select id="statusFilter">
+                  <option value="">전체</option>
+                  <option value="Good">✅ 우수</option>
+                  <option value="Needs Improvement">⚠️ 보통</option>
+                  <option value="Poor">❌ 개선 필요</option>
+                  </select>
+              </div>
+            </div>
+
+            <div class="filter-row">
+              <div class="filter-item filter-search">
+                <label>URL 검색</label>
+                <input
+                  type="text"
+                  id="tableSearch"
+                  placeholder="URL 검색..."
+                >
+              </div>
+
+              <div class="filter-actions">
+                <button onclick="applyFilters()" class="btn btn-primary">
+                  🔍 조회
+                </button>
+                <button onclick="resetFilters()" class="btn btn-secondary">
+                  🔄 초기화
+                </button>
+              </div>
             </div>
           </div>
 
-          <div class="filter-row">
-            <div class="filter-item filter-search">
-              <label>URL 검색</label>
-              <input 
-                type="text" 
-                id="tableSearch" 
-                placeholder="URL 검색..."
-              >
-            </div>
+          <div class="table-container">
+            <table id="resultsTable">
+              <thead>
+                <tr>
+                  <th style="width: 120px;">최근측정일시</th>
+                  <th style="width: 180px;">URL</th>
+                  <th style="width: 100px;">사이트명</th>
+                  <th style="width: 100px;">페이지상세</th>
+                  <th style="width: 90px;">
+                    <span class="tooltip-header">
+                      Performance
+                      <span class="tooltip-text">
+                        <strong>Performance Score</strong>
+                        Google Lighthouse 성능 점수 (0-100점). 페이지 로딩 속도와 사용자 경험을 종합 평가합니다.
+                      </span>
+                    </span>
+                  </th>
+                  <th style="width: 80px;">
+                    <span class="tooltip-header">
+                      상태
+                      <span class="tooltip-text">
+                        <strong>Performance Status</strong>
+                        Good (90-100점): 우수<br>
+                        Needs Improvement (50-89점): 개선 필요<br>
+                        Poor (0-49점): 나쁨
+                      </span>
+                    </span>
+                  </th>
+                  <th style="width: 70px;">
+                    <span class="tooltip-header">
+                      FCP
+                      <span class="tooltip-text">
+                        <strong>First Contentful Paint</strong>
+                        첫 콘텐츠가 화면에 표시되는 시간. 사용자가 페이지 로딩을 체감하는 첫 순간입니다. (좋음: 1.8초 이하)
+                      </span>
+                    </span>
+                  </th>
+                  <th style="width: 70px;">
+                    <span class="tooltip-header">
+                      LCP
+                      <span class="tooltip-text">
+                        <strong>Largest Contentful Paint</strong>
+                        가장 큰 콘텐츠가 화면에 표시되는 시간. 페이지의 주요 콘텐츠 로딩 속도를 나타냅니다. (좋음: 2.5초 이하)
+                      </span>
+                    </span>
+                  </th>
+                  <th style="width: 70px;">
+                    <span class="tooltip-header">
+                      TBT
+                      <span class="tooltip-text">
+                        <strong>Total Blocking Time</strong>
+                        메인 스레드가 차단된 총 시간(ms). JavaScript 실행으로 인한 페이지 반응 지연을 측정합니다. (좋음: 200ms 이하)
+                      </span>
+                    </span>
+                  </th>
+                  <th style="width: 90px;">상세보기</th>
+                  <th style="width: 70px;">측정횟수</th>
+                </tr>
+              </thead>
+              <tbody id="resultsTableBody">
+                <tr>
+                  <td colspan="11" style="text-align:center;">
+                    데이터를 불러오는 중...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-            <div class="filter-actions">
-              <button onclick="applyFilters()" class="btn btn-primary">
-                🔍 조회
+          <div class="pagination" id="pagination"></div>
+        </section>
+      </div>
+
+      <!-- ==================== URL 관리 탭 ==================== -->
+      <div id="tab-urlmanager" class="tab-content">
+        <!-- 엑셀 복붙 영역 -->
+        <section class="paste-section">
+          <h2>📝 엑셀에서 복사-붙여넣기</h2>
+          <p class="help-text">
+            엑셀에서 URL, 사이트명, 페이지상세, 네트워크 열을 복사해서 아래에 붙여넣으세요.
+          </p>
+
+          <textarea
+            id="pasteArea"
+            placeholder="엑셀에서 복사한 내용을 여기에 붙여넣으세요 (Ctrl+V)&#10;&#10;예시:&#10;https://example.com	사이트A	메인페이지	Mobile&#10;https://example.com	사이트A	메인페이지	Desktop"
+            rows="8"
+          ></textarea>
+
+          <div class="button-group">
+            <button onclick="parseExcelData()" class="btn btn-primary">
+              ✅ 데이터 검증
+            </button>
+            <button onclick="clearPasteArea()" class="btn btn-secondary">
+              🗑️ 지우기
+            </button>
+          </div>
+
+          <!-- 검증 결과 -->
+          <div id="validationResult" class="validation-result" style="display:none;">
+            <h3>검증 결과</h3>
+            <div id="validationSummary"></div>
+            <div id="validationDetails"></div>
+            <button onclick="saveUrls()" class="btn btn-success">
+              💾 저장하기
+            </button>
+          </div>
+        </section>
+
+        <!-- 현재 등록된 URL 목록 -->
+        <section class="url-list-section">
+          <div class="section-header">
+            <h2>📋 등록된 URL (<span id="urlCount">0</span>개)</h2>
+            <div class="button-group">
+              <button onclick="loadUrls()" class="btn btn-secondary">
+                🔄 새로고침
               </button>
-              <button onclick="resetFilters()" class="btn btn-secondary">
-                🔄 초기화
+              <button onclick="deleteAllUrls()" class="btn btn-danger">
+                🗑️ 전체 삭제
               </button>
             </div>
           </div>
-        </div>
 
-        <div class="table-container">
-          <table id="resultsTable">
-            <thead>
-              <tr>
-                <th style="width: 120px;">최근측정일시</th>
-                <th style="width: 180px;">URL</th>
-                <th style="width: 100px;">사이트명</th>
-                <th style="width: 100px;">페이지상세</th>
-                <th style="width: 90px;">
-                  <span class="tooltip-header">
-                    Performance
-                    <span class="tooltip-text">
-                      <strong>Performance Score</strong>
-                      Google Lighthouse 성능 점수 (0-100점). 페이지 로딩 속도와 사용자 경험을 종합 평가합니다.
-                    </span>
-                  </span>
-                </th>
-                <th style="width: 80px;">
-                  <span class="tooltip-header">
-                    상태
-                    <span class="tooltip-text">
-                      <strong>Performance Status</strong>
-                      Good (90-100점): 우수<br>
-                      Needs Improvement (50-89점): 개선 필요<br>
-                      Poor (0-49점): 나쁨
-                    </span>
-                  </span>
-                </th>
-                <th style="width: 70px;">
-                  <span class="tooltip-header">
-                    FCP
-                    <span class="tooltip-text">
-                      <strong>First Contentful Paint</strong>
-                      첫 콘텐츠가 화면에 표시되는 시간. 사용자가 페이지 로딩을 체감하는 첫 순간입니다. (좋음: 1.8초 이하)
-                    </span>
-                  </span>
-                </th>
-                <th style="width: 70px;">
-                  <span class="tooltip-header">
-                    LCP
-                    <span class="tooltip-text">
-                      <strong>Largest Contentful Paint</strong>
-                      가장 큰 콘텐츠가 화면에 표시되는 시간. 페이지의 주요 콘텐츠 로딩 속도를 나타냅니다. (좋음: 2.5초 이하)
-                    </span>
-                  </span>
-                </th>
-                <th style="width: 70px;">
-                  <span class="tooltip-header">
-                    TBT
-                    <span class="tooltip-text">
-                      <strong>Total Blocking Time</strong>
-                      메인 스레드가 차단된 총 시간(ms). JavaScript 실행으로 인한 페이지 반응 지연을 측정합니다. (좋음: 200ms 이하)
-                    </span>
-                  </span>
-                </th>
-                <th style="width: 90px;">상세보기</th>
-                <th style="width: 70px;">측정횟수</th>
-              </tr>
-            </thead>
-            <tbody id="resultsTableBody">
-              <tr>
-                <td colspan="11" style="text-align:center;">
-                  데이터를 불러오는 중...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          <div class="search-bar">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="URL 또는 사이트명 검색..."
+              onkeyup="filterUrlList()"
+            >
+          </div>
 
-        <div class="pagination" id="pagination"></div>
-      </section>
+          <div class="table-container">
+            <table id="urlTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>URL</th>
+                  <th>사이트명</th>
+                  <th>페이지상세</th>
+                  <th>네트워크</th>
+                  <th>등록일</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody id="urlTableBody">
+                <tr>
+                  <td colspan="7" style="text-align:center;">
+                    데이터를 불러오는 중...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </main>
 
     <!-- 로딩 모달 -->
@@ -357,7 +526,7 @@
           <h2 id="detailTitle">📊 측정 이력</h2>
           <button onclick="closeDetailModal()" class="close-btn">✕</button>
         </div>
-        
+
         <div class="modal-body">
           <!-- 기본 정보 (평균 포함) -->
           <section class="detail-section">
@@ -380,7 +549,7 @@
                 <span class="info-value" id="detail-url-display">-</span>
               </div>
             </div>
-            
+
             <!-- 평균값 추가 -->
             <div class="average-metrics">
               <h4>📊 전체 평균</h4>
@@ -675,5 +844,6 @@
     </div>
 
   <script src="js/dashboard.js"></script>
+  <script src="js/url-manager.js"></script>
 </body>
 </html>

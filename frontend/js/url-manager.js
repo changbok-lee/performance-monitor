@@ -1,11 +1,7 @@
 // auth.js에서 API_BASE, getAuthHeaders 사용
 
 let parsedData = [];
-
-// 페이지 로드 시 URL 목록 불러오기
-window.addEventListener('load', () => {
-  loadUrls();
-});
+let allUrlData = [];
 
 // ==================== 엑셀 데이터 파싱 ====================
 
@@ -137,18 +133,27 @@ async function saveUrls() {
 // ==================== URL 목록 불러오기 ====================
 
 async function loadUrls() {
+  const tbody = document.getElementById('urlTableBody');
+  const countEl = document.getElementById('urlCount');
+
+  // 요소가 없으면 (다른 탭에 있으면) 스킵
+  if (!tbody) return;
+
   try {
     const response = await fetch(`${API_BASE}/urls`, {
       headers: getAuthHeaders()
     });
-    const data = await response.json();
+    const urls = await response.json();
 
-    displayUrls(data.urls);
-    document.getElementById('urlCount').textContent = data.count;
+    // API가 배열을 직접 반환하는 경우 처리
+    allUrlData = Array.isArray(urls) ? urls : (urls.urls || []);
+
+    displayUrls(allUrlData);
+    if (countEl) countEl.textContent = allUrlData.length;
 
   } catch (error) {
     console.error('URL 목록 불러오기 실패:', error);
-    document.getElementById('urlTableBody').innerHTML = `
+    tbody.innerHTML = `
       <tr>
         <td colspan="7" style="text-align:center;color:red;">
           ❌ 데이터 불러오기 실패
@@ -199,8 +204,11 @@ function displayUrls(urls) {
 
 // ==================== URL 검색/필터 ====================
 
-function filterUrls() {
-  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+function filterUrlList() {
+  const searchInput = document.getElementById('searchInput');
+  if (!searchInput) return;
+
+  const searchTerm = searchInput.value.toLowerCase();
   const rows = document.querySelectorAll('#urlTableBody tr');
 
   rows.forEach(row => {

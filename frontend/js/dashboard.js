@@ -5,6 +5,47 @@ let currentFilter = 'all';
 let currentSort = { column: 'latest', order: 'desc' };
 let measurementCheckInterval = null;
 let currentNetworkTab = 'Mobile';
+let currentMainTab = 'dashboard';
+
+// ==================== 메인 탭 전환 ====================
+
+function switchMainTab(tabName) {
+  currentMainTab = tabName;
+
+  // 모든 탭 컨텐츠 숨기기
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+
+  // 선택된 탭 컨텐츠 표시
+  const selectedTab = document.getElementById(`tab-${tabName}`);
+  if (selectedTab) {
+    selectedTab.classList.add('active');
+  }
+
+  // 탭 버튼 활성화 상태 변경
+  document.querySelectorAll('.main-tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  event.target.classList.add('active');
+
+  // 측정 버튼 표시/숨김 (측정결과 탭에서만 표시)
+  const measureButtons = document.getElementById('measureButtons');
+  if (measureButtons) {
+    if (tabName === 'results') {
+      measureButtons.classList.add('visible');
+    } else {
+      measureButtons.classList.remove('visible');
+    }
+  }
+
+  // URL 관리 탭으로 전환 시 URL 목록 로드
+  if (tabName === 'urlmanager') {
+    if (typeof loadUrls === 'function') {
+      loadUrls();
+    }
+  }
+}
 
 // ==================== 한국시간 변환 유틸리티 ====================
 
