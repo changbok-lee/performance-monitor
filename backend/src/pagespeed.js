@@ -190,8 +190,9 @@ async function measurePageSpeed(url, network = 'Mobile') {
     const suggestions = extractOpportunities(lighthouseResult);
 
     let status = 'Good';
-    if (performanceScore < 90) status = 'Needs Improvement';
-    if (performanceScore < 50) status = 'Poor';
+    if (performanceScore === 0) status = 'Failed';
+    else if (performanceScore < 50) status = 'Poor';
+    else if (performanceScore < 90) status = 'Needs Improvement';
 
     // ⭐ 한국시간으로 저장 ⭐
     const result = {

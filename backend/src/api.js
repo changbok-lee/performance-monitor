@@ -287,6 +287,213 @@ app.delete('/api/measurements', auth.authMiddleware, async (req, res) => {
   }
 });
 
+// ==================== 개선사항 Report API ====================
+
+// 개선사항 Report 데이터 조회
+app.get('/api/improvement-report', auth.authMiddleware, async (req, res) => {
+  try {
+    // 최근 10일간의 측정 데이터 조회
+    const measurements = await supabase.getRecentMeasurementsWithIssues(10);
+
+    // suggestions 파싱 및 집계
+    const issueStats = {};
+
+    measurements.forEach(m => {
+      if (!m.suggestions) return;
+
+      // " | "로 구분된 suggestions 파싱
+      const suggestions = m.suggestions.split(' | ');
+
+      suggestions.forEach(suggestion => {
+        // "렌더링 차단 리소스 제거: 약 1.2초 개선 가능" 형태 파싱
+        const match = suggestion.match(/^(.+?):\s*약\s*([\d.]+)(초|ms)\s*개선 가능$/);
+
+        if (match) {
+          const issueTitle = match[1].trim();
+          const value = parseFloat(match[2]);
+          const unit = match[3];
+
+          // ms를 초로 변환
+          const impactSeconds = unit === 'ms' ? value / 1000 : value;
+
+          if (!issueStats[issueTitle]) {
+            issueStats[issueTitle] = {
+              title: issueTitle,
+              count: 0,
+              totalImpact: 0,
+              pageDetails: new Set()
+            };
+          }
+
+          issueStats[issueTitle].count++;
+          issueStats[issueTitle].totalImpact += impactSeconds;
+
+          if (m.page_detail) {
+            issueStats[issueTitle].pageDetails.add(m.page_detail);
+          }
+        }
+      });
+    });
+
+    // 배열로 변환 및 정렬
+    const issueList = Object.values(issueStats).map(issue => ({
+      title: issue.title,
+      count: issue.count,
+      totalImpact: issue.totalImpact,
+      avgImpact: issue.totalImpact / issue.count,
+      pageDetails: Array.from(issue.pageDetails)
+    }));
+
+    // 복합 점수로 정렬 (빈도 * 평균 임팩트)
+    issueList.sort((a, b) => {
+      const scoreA = a.count * a.avgImpact;
+      const scoreB = b.count * b.avgImpact;
+      return scoreB - scoreA;
+    });
+
+    // TOP 20
+    const top20 = issueList.slice(0, 20);
+
+    // 캐시된 개선 제안 조회
+    let cachedSuggestions = {};
+    try {
+      const cached = await supabase.getImprovementSuggestions();
+      cached.forEach(c => {
+        cachedSuggestions[c.issue_key] = c.solution;
+      });
+    } catch (e) {
+      console.log('캐시 테이블 없음 - 새로 생성 필요');
+    }
+
+    // 결과에 캐시된 개선 제안 추가
+    const result = top20.map((issue, index) => ({
+      rank: index + 1,
+      title: issue.title,
+      count: issue.count,
+      totalImpact: issue.totalImpact.toFixed(2),
+      avgImpact: issue.avgImpact.toFixed(2),
+      pageDetails: issue.pageDetails,
+      solution: cachedSuggestions[issue.title] || null
+    }));
+
+    // 날짜 범위 계산
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 10);
+
+    res.json({
+      success: true,
+      dateRange: {
+        start: startDate.toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0]
+      },
+      totalMeasurements: measurements.length,
+      issues: result
+    });
+
+  } catch (error) {
+    console.error('개선사항 Report 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '개선사항 Report 조회 실패: ' + error.message
+    });
+  }
+});
+
+// Gemini로 개선 제안 생성
+app.post('/api/generate-solution', auth.authMiddleware, async (req, res) => {
+  const { issueTitle } = req.body;
+
+  if (!issueTitle) {
+    return res.status(400).json({
+      success: false,
+      error: '문제점 제목이 필요합니다.'
+    });
+  }
+
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+
+  if (!geminiApiKey) {
+    return res.status(500).json({
+      success: false,
+      error: 'GEMINI_API_KEY가 설정되지 않았습니다.'
+    });
+  }
+
+  try {
+    const axios = require('axios');
+
+    const prompt = `당신은 아임웹, Shopify 같은 웹빌더 플랫폼의 프론트엔드 성능 최적화 전문가입니다.
+
+다음 웹 성능 문제에 대한 구체적인 해결 방법을 제시해주세요:
+"${issueTitle}"
+
+요구사항:
+1. 웹빌더 플랫폼 FE 엔지니어가 이해하고 바로 적용할 수 있는 수준으로 작성
+2. 구체적인 코드 예시 포함 (JavaScript, CSS, HTML 등)
+3. 웹빌더 특성상 사용자 커스텀 코드와의 호환성 고려
+4. 성능 개선 효과 수치 언급
+5. 주의사항이나 사이드 이펙트 명시
+
+형식:
+## 문제 원인
+(간단히 1-2줄)
+
+## 해결 방법
+### 1. 첫 번째 방법
+(설명 + 코드)
+
+### 2. 두 번째 방법 (있다면)
+(설명 + 코드)
+
+## 기대 효과
+(성능 개선 수치)
+
+## 주의사항
+(사이드 이펙트, 호환성 등)`;
+
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+      {
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048
+        }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      }
+    );
+
+    const solution = response.data.candidates[0].content.parts[0].text;
+
+    // 캐시에 저장
+    try {
+      await supabase.saveImprovementSuggestion(issueTitle, solution);
+    } catch (e) {
+      console.log('캐시 저장 실패 (테이블 없음):', e.message);
+    }
+
+    res.json({
+      success: true,
+      solution
+    });
+
+  } catch (error) {
+    console.error('Gemini API 호출 실패:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'AI 개선 제안 생성 실패: ' + error.message
+    });
+  }
+});
+
 // ==================== 측정 함수 ====================
 
 async function measureAndSave(urls) {

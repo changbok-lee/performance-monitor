@@ -163,72 +163,114 @@ async function loadDashboard() {
   }
 }
 
-// ==================== 통합 요약 (백업 HTML ID) ====================
+// ==================== 통합 요약 ====================
 
 function displaySummary(measurements) {
-  // ⭐ 백업 HTML의 실제 ID ⭐
   const avgPerf = document.getElementById('avgPerformance');
-  const goodRate = document.getElementById('goodRate');
   const totalUrls = document.getElementById('totalUrls');
   const totalMeas = document.getElementById('totalMeasurements');
-  
-  if (!avgPerf || !goodRate || !totalUrls || !totalMeas) {
+
+  if (!avgPerf || !totalUrls || !totalMeas) {
     console.warn('Summary 요소를 찾을 수 없습니다.');
     return;
   }
-  
+
   if (measurements.length === 0) {
     avgPerf.textContent = '-';
-    goodRate.textContent = '-';
     totalUrls.textContent = '-';
     totalMeas.textContent = '-';
     return;
   }
-  
+
   const validScores = measurements.filter(m => m.performance_score > 0);
   const avgScore = validScores.reduce((sum, m) => sum + m.performance_score, 0) / validScores.length;
-  const goodCount = measurements.filter(m => m.status === 'Good').length;
-  const goodPercent = (goodCount / measurements.length) * 100;
-  
+
   const uniqueUrls = [...new Set(measurements.map(m => m.url))];
-  
+
   avgPerf.textContent = Math.round(avgScore);
-  goodRate.textContent = goodPercent.toFixed(1) + '%';
   totalUrls.textContent = uniqueUrls.length;
   totalMeas.textContent = measurements.length;
 }
 
-// ==================== 상태별 분포 (백업 HTML ID) ====================
+// ==================== 데일리 상태별 분포 ====================
 
 function displayStatusDistribution(measurements) {
-  // ⭐ 백업 HTML의 실제 ID ⭐
-  const goodCount = document.getElementById('goodCount');
-  const warningCount = document.getElementById('warningCount');
-  const poorCount = document.getElementById('poorCount');
-  
-  if (!goodCount || !warningCount || !poorCount) {
-    console.warn('Status distribution 요소를 찾을 수 없습니다.');
+  const dailyStatusDate = document.getElementById('dailyStatusDate');
+  const dailyGoodCount = document.getElementById('dailyGoodCount');
+  const dailyWarningCount = document.getElementById('dailyWarningCount');
+  const dailyPoorCount = document.getElementById('dailyPoorCount');
+  const dailyFailedCount = document.getElementById('dailyFailedCount');
+
+  if (!dailyGoodCount || !dailyWarningCount || !dailyPoorCount || !dailyFailedCount) {
+    console.warn('Daily status distribution 요소를 찾을 수 없습니다.');
     return;
   }
-  
+
+  if (measurements.length === 0) {
+    if (dailyStatusDate) dailyStatusDate.textContent = '-';
+    dailyGoodCount.textContent = '0개 (0%)';
+    dailyWarningCount.textContent = '0개 (0%)';
+    dailyPoorCount.textContent = '0개 (0%)';
+    dailyFailedCount.textContent = '0개 (0%)';
+    return;
+  }
+
+  // 가장 최근 측정 날짜 찾기 (한국시간 기준)
+  let latestDate = null;
+  let latestDateKey = null;
+
+  measurements.forEach(m => {
+    const date = new Date(m.measured_at);
+    const koreaDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+    const dateKey = koreaDate.toISOString().split('T')[0];
+
+    if (!latestDate || date > latestDate) {
+      latestDate = date;
+      latestDateKey = dateKey;
+    }
+  });
+
+  // 최근 날짜의 측정 데이터만 필터링
+  const dailyMeasurements = measurements.filter(m => {
+    const date = new Date(m.measured_at);
+    const koreaDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+    const dateKey = koreaDate.toISOString().split('T')[0];
+    return dateKey === latestDateKey;
+  });
+
+  // 상태별 카운트
   const statusCounts = {
     'Good': 0,
     'Needs Improvement': 0,
-    'Poor': 0
+    'Poor': 0,
+    'Failed': 0
   };
-  
-  measurements.forEach(m => {
-    if (statusCounts.hasOwnProperty(m.status)) {
-      statusCounts[m.status]++;
+
+  dailyMeasurements.forEach(m => {
+    if (m.status === 'Good') {
+      statusCounts['Good']++;
+    } else if (m.status === 'Needs Improvement') {
+      statusCounts['Needs Improvement']++;
+    } else if (m.status === 'Poor') {
+      statusCounts['Poor']++;
+    } else if (m.status === 'Failed') {
+      statusCounts['Failed']++;
     }
   });
-  
-  const total = measurements.length || 1;
-  
-  // ⭐ 백업 HTML 형식: "0개 (0%)" ⭐
-  goodCount.textContent = `${statusCounts['Good']}개 (${((statusCounts['Good'] / total) * 100).toFixed(1)}%)`;
-  warningCount.textContent = `${statusCounts['Needs Improvement']}개 (${((statusCounts['Needs Improvement'] / total) * 100).toFixed(1)}%)`;
-  poorCount.textContent = `${statusCounts['Poor']}개 (${((statusCounts['Poor'] / total) * 100).toFixed(1)}%)`;
+
+  const total = dailyMeasurements.length || 1;
+
+  // 날짜 표시 (한국시간)
+  if (dailyStatusDate && latestDateKey) {
+    const [, month, day] = latestDateKey.split('-');
+    dailyStatusDate.textContent = `(${parseInt(month)}월 ${parseInt(day)}일 측정 기준)`;
+  }
+
+  // 상태별 분포 표시
+  dailyGoodCount.textContent = `${statusCounts['Good']}개 (${((statusCounts['Good'] / total) * 100).toFixed(1)}%)`;
+  dailyWarningCount.textContent = `${statusCounts['Needs Improvement']}개 (${((statusCounts['Needs Improvement'] / total) * 100).toFixed(1)}%)`;
+  dailyPoorCount.textContent = `${statusCounts['Poor']}개 (${((statusCounts['Poor'] / total) * 100).toFixed(1)}%)`;
+  dailyFailedCount.textContent = `${statusCounts['Failed']}개 (${((statusCounts['Failed'] / total) * 100).toFixed(1)}%)`;
 }
 
 // ==================== 네트워크 비교 ====================
@@ -587,10 +629,13 @@ function displayMeasurements(measurements, network) {
       };
     }
     
-    grouped[key].scores.push(m.performance_score);
-    grouped[key].fcps.push(m.fcp);
-    grouped[key].lcps.push(m.lcp);
-    grouped[key].tbts.push(m.tbt);
+    // 유효한 점수만 추가 (0보다 큰 값)
+    if (m.performance_score > 0) {
+      grouped[key].scores.push(m.performance_score);
+      grouped[key].fcps.push(m.fcp);
+      grouped[key].lcps.push(m.lcp);
+      grouped[key].tbts.push(m.tbt);
+    }
     grouped[key].count++;
     
     const currentDate = new Date(m.measured_at);
@@ -602,15 +647,32 @@ function displayMeasurements(measurements, network) {
   });
   
   const averaged = Object.values(grouped).map(data => {
+    // 유효한 점수가 없으면 Failed
+    if (data.scores.length === 0) {
+      return {
+        url: data.url,
+        site_name: data.site_name,
+        page_detail: data.page_detail,
+        network: data.network,
+        avg_score: 0,
+        avg_fcp: '-',
+        avg_lcp: '-',
+        avg_tbt: '-',
+        status: 'Failed',
+        latest_measured_at: data.latest_measured_at,
+        count: data.count
+      };
+    }
+
     const avg_score = data.scores.reduce((a, b) => a + b, 0) / data.scores.length;
     const avg_fcp = data.fcps.reduce((a, b) => a + b, 0) / data.fcps.length;
     const avg_lcp = data.lcps.reduce((a, b) => a + b, 0) / data.lcps.length;
     const avg_tbt = data.tbts.reduce((a, b) => a + b, 0) / data.tbts.length;
-    
+
     let status = 'Good';
-    if (avg_score < 90) status = 'Needs Improvement';
     if (avg_score < 50) status = 'Poor';
-    
+    else if (avg_score < 90) status = 'Needs Improvement';
+
     return {
       url: data.url,
       site_name: data.site_name,
@@ -644,11 +706,11 @@ function displayMeasurements(measurements, network) {
       <td class="url-cell" title="${m.url}">${m.url}</td>
       <td>${m.site_name || '-'}</td>
       <td>${m.page_detail || '-'}</td>
-      <td>${m.avg_score}</td>
+      <td>${m.avg_score || '-'}</td>
       <td><span class="status-badge status-${m.status.toLowerCase().replace(' ', '-')}">${getStatusKorean(m.status)}</span></td>
-      <td>${m.avg_fcp}s</td>
-      <td>${m.avg_lcp}s</td>
-      <td>${m.avg_tbt}ms</td>
+      <td>${m.avg_fcp === '-' ? '-' : m.avg_fcp + 's'}</td>
+      <td>${m.avg_lcp === '-' ? '-' : m.avg_lcp + 's'}</td>
+      <td>${m.avg_tbt === '-' ? '-' : m.avg_tbt + 'ms'}</td>
       <td>
         <button onclick="showDetailModal('${m.url}', '${m.network}')" class="btn btn-sm btn-primary">
           상세보기
@@ -1160,16 +1222,282 @@ function clearAllMeasurements() {
   alert('측정 결과 초기화 기능은 구현 예정입니다.');
 }
 
+// ==================== 개선사항 Report 모달 ====================
+
+async function showImprovementReportModal() {
+  const modal = document.getElementById('improvementReportModal');
+  const body = document.getElementById('improvementReportBody');
+  const dateRange = document.getElementById('reportDateRange');
+
+  if (!modal) return;
+
+  modal.style.display = 'flex';
+
+  // 로딩 표시
+  body.innerHTML = `
+    <div class="report-loading">
+      <div class="spinner"></div>
+      <p>개선사항을 분석하고 있습니다...</p>
+    </div>
+  `;
+
+  try {
+    const token = Auth.getToken();
+    const response = await fetch('/api/improvement-report', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('개선사항 Report 조회 실패');
+    }
+
+    const data = await response.json();
+
+    // 날짜 범위 표시
+    if (dateRange && data.dateRange) {
+      const start = new Date(data.dateRange.start);
+      const end = new Date(data.dateRange.end);
+      dateRange.textContent = `${start.getMonth() + 1}/${start.getDate()} ~ ${end.getMonth() + 1}/${end.getDate()} (최근 10일)`;
+    }
+
+    // 데이터 없음
+    if (!data.issues || data.issues.length === 0) {
+      body.innerHTML = `
+        <div class="no-issues">
+          <div class="no-issues-icon">📊</div>
+          <p>최근 10일간 수집된 개선사항이 없습니다.</p>
+          <p style="font-size: 0.9em; color: #aaa;">성능 측정을 실행하면 개선사항이 수집됩니다.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // 테이블 생성
+    body.innerHTML = `
+      <table class="improvement-table">
+        <thead>
+          <tr>
+            <th>순위</th>
+            <th>주요문제점</th>
+            <th>연관 페이지</th>
+            <th class="solution-cell">개선제안</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.issues.map(issue => renderIssueRow(issue)).join('')}
+        </tbody>
+      </table>
+    `;
+
+  } catch (error) {
+    console.error('개선사항 Report 조회 실패:', error);
+    body.innerHTML = `
+      <div class="no-issues">
+        <div class="no-issues-icon">⚠️</div>
+        <p>개선사항을 불러오는데 실패했습니다.</p>
+        <p style="font-size: 0.9em; color: #aaa;">${error.message}</p>
+      </div>
+    `;
+  }
+}
+
+function renderIssueRow(issue) {
+  const isTop3 = issue.rank <= 3;
+  const hasSolution = !!issue.solution;
+
+  // 개선제안 미리보기 (첫 100자)
+  const solutionPreview = hasSolution
+    ? issue.solution.substring(0, 100).replace(/[#*`]/g, '') + '...'
+    : '';
+
+  return `
+    <tr>
+      <td style="text-align: center;">
+        <span class="rank-badge ${isTop3 ? 'top3' : 'normal'}">${issue.rank}</span>
+      </td>
+      <td>
+        <div class="issue-title">${issue.title}</div>
+        <div class="issue-stats">
+          <span class="count">${issue.count}회 발생</span> ·
+          <span class="impact">총 ${issue.totalImpact}초 개선 가능</span>
+        </div>
+      </td>
+      <td>
+        <div class="page-tags">
+          ${issue.pageDetails.length > 0
+            ? issue.pageDetails.map(p => `<span class="page-tag">${p}</span>`).join('')
+            : '<span style="color:#888">-</span>'
+          }
+        </div>
+      </td>
+      <td class="solution-cell">
+        <div class="solution-content" id="solution-${issue.rank}">
+          ${hasSolution ? `
+            <div class="solution-preview">${solutionPreview}</div>
+            <div class="solution-full" id="solution-full-${issue.rank}">${formatSolution(issue.solution)}</div>
+            <div class="solution-buttons">
+              <button class="btn-expand" onclick="toggleSolution(${issue.rank})">
+                📖 펼치기
+              </button>
+              <button class="btn-copy" onclick="copySolution(${issue.rank}, '${escapeForAttr(issue.solution)}')">
+                📋 복사
+              </button>
+            </div>
+          ` : `
+            <div class="solution-buttons">
+              <button class="btn-generate" onclick="generateSolution(${issue.rank}, '${escapeForAttr(issue.title)}')">
+                ✨ AI 개선안 생성
+              </button>
+            </div>
+          `}
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function formatSolution(solution) {
+  if (!solution) return '';
+
+  // 마크다운 간단 변환
+  return solution
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/## (.+)/g, '<h2>$1</h2>')
+    .replace(/### (.+)/g, '<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+function escapeForAttr(str) {
+  if (!str) return '';
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+}
+
+function toggleSolution(rank) {
+  const fullDiv = document.getElementById(`solution-full-${rank}`);
+  const btn = document.querySelector(`#solution-${rank} .btn-expand`);
+
+  if (fullDiv.classList.contains('show')) {
+    fullDiv.classList.remove('show');
+    btn.innerHTML = '📖 펼치기';
+  } else {
+    fullDiv.classList.add('show');
+    btn.innerHTML = '📕 접기';
+  }
+}
+
+async function copySolution(rank, solution) {
+  try {
+    // 이스케이프 복원
+    const decoded = solution
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\'/g, "'")
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\');
+
+    await navigator.clipboard.writeText(decoded);
+
+    const btn = document.querySelector(`#solution-${rank} .btn-copy`);
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '✅ 복사됨!';
+    setTimeout(() => {
+      btn.innerHTML = originalText;
+    }, 2000);
+  } catch (error) {
+    console.error('복사 실패:', error);
+    alert('복사에 실패했습니다.');
+  }
+}
+
+async function generateSolution(rank, issueTitle) {
+  const container = document.getElementById(`solution-${rank}`);
+
+  // 로딩 표시
+  container.innerHTML = `
+    <div class="generating">
+      <div class="mini-spinner"></div>
+      AI가 개선안을 생성하고 있습니다...
+    </div>
+  `;
+
+  try {
+    const token = Auth.getToken();
+    const response = await fetch('/api/generate-solution', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ issueTitle })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || '개선안 생성 실패');
+    }
+
+    const data = await response.json();
+    const solution = data.solution;
+    const solutionPreview = solution.substring(0, 100).replace(/[#*`]/g, '') + '...';
+
+    container.innerHTML = `
+      <div class="solution-preview">${solutionPreview}</div>
+      <div class="solution-full show" id="solution-full-${rank}">${formatSolution(solution)}</div>
+      <div class="solution-buttons">
+        <button class="btn-expand" onclick="toggleSolution(${rank})">
+          📕 접기
+        </button>
+        <button class="btn-copy" onclick="copySolution(${rank}, '${escapeForAttr(solution)}')">
+          📋 복사
+        </button>
+      </div>
+    `;
+
+  } catch (error) {
+    console.error('개선안 생성 실패:', error);
+    container.innerHTML = `
+      <div style="color: #dc3545; font-size: 0.85em;">
+        ⚠️ ${error.message}
+      </div>
+      <div class="solution-buttons" style="margin-top: 8px;">
+        <button class="btn-generate" onclick="generateSolution(${rank}, '${escapeForAttr(issueTitle)}')">
+          🔄 다시 시도
+        </button>
+      </div>
+    `;
+  }
+}
+
+function closeImprovementReportModal() {
+  const modal = document.getElementById('improvementReportModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
 // ==================== 모달 외부 클릭 ====================
 
 window.onclick = function(event) {
   const detailModal = document.getElementById('detailModal');
-  const loadingModal = document.getElementById('loadingModal');
-  
+  const improvementReportModal = document.getElementById('improvementReportModal');
+
   if (event.target === detailModal) {
     detailModal.style.display = 'none';
   }
-  
+
+  if (event.target === improvementReportModal) {
+    improvementReportModal.style.display = 'none';
+  }
+
   // loadingModal은 외부 클릭으로 닫히지 않음
 }
 

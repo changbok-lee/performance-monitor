@@ -147,65 +147,56 @@
       <div id="tab-dashboard" class="tab-content active">
         <!-- 통합 요약 섹션 -->
         <section class="unified-summary">
-          <!-- 상단 요약 카드 -->
-          <div class="summary-cards-compact">
-            <div class="card card-blue">
-              <div class="card-icon">📊</div>
-              <div class="card-content">
-                <div class="card-title">전체 평균</div>
-                <div class="card-value" id="avgPerformance">-</div>
-                <div class="card-label">Performance 점수</div>
+          <!-- 상단 요약 (왼쪽: 통계, 오른쪽: 데일리 상태별 분포) -->
+          <div class="summary-top-row">
+            <!-- 왼쪽: 통계 카드 (2x2 그리드) -->
+            <div class="summary-stats-grid">
+              <div class="stat-item">
+                <span class="stat-label">📊 전체 평균</span>
+                <span class="stat-value" id="avgPerformance">-</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">🔗 측정된 URL</span>
+                <span class="stat-value" id="totalUrls">-</span>
+                <span class="stat-unit">개</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">📈 총 측정 횟수</span>
+                <span class="stat-value" id="totalMeasurements">-</span>
+                <span class="stat-unit">회</span>
+              </div>
+              <div class="stat-item stat-item-button" onclick="showImprovementReportModal()">
+                <span class="stat-label">📋 개선사항 Report</span>
+                <span class="stat-arrow">→</span>
               </div>
             </div>
 
-            <div class="card card-green">
-              <div class="card-icon">✅</div>
-              <div class="card-content">
-                <div class="card-title">Good 비율</div>
-                <div class="card-value" id="goodRate">-</div>
-                <div class="card-label">90점 이상</div>
-              </div>
-            </div>
-
-            <div class="card card-purple" onclick="switchMainTab('urlmanager')" style="cursor: pointer;">
-              <div class="card-icon">🔗</div>
-              <div class="card-content">
-                <div class="card-title">측정된 URL</div>
-                <div class="card-value" id="totalUrls">-</div>
-                <div class="card-label">개</div>
-              </div>
-            </div>
-
-            <div class="card card-orange" onclick="switchMainTab('results')" style="cursor: pointer;">
-              <div class="card-icon">📈</div>
-              <div class="card-content">
-                <div class="card-title">총 측정 횟수</div>
-                <div class="card-value" id="totalMeasurements">-</div>
-                <div class="card-label">회</div>
+            <!-- 오른쪽: 데일리 상태별 분포 -->
+            <div class="daily-status-section">
+              <h3>📊 데일리 상태별 분포 <span class="daily-status-date" id="dailyStatusDate"></span></h3>
+              <div class="daily-status-bars">
+                <div class="daily-status-item">
+                  <span class="daily-status-label good">Good</span>
+                  <span class="daily-status-value" id="dailyGoodCount">0개 (0%)</span>
+                </div>
+                <div class="daily-status-item">
+                  <span class="daily-status-label warning">⚠️ Needs Improvement</span>
+                  <span class="daily-status-value" id="dailyWarningCount">0개 (0%)</span>
+                </div>
+                <div class="daily-status-item">
+                  <span class="daily-status-label poor">Poor</span>
+                  <span class="daily-status-value" id="dailyPoorCount">0개 (0%)</span>
+                </div>
+                <div class="daily-status-item">
+                  <span class="daily-status-label failed">실패</span>
+                  <span class="daily-status-value" id="dailyFailedCount">0개 (0%)</span>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- 하단 통합 정보 -->
           <div class="summary-bottom">
-            <!-- 상태별 분포 -->
-            <div class="status-section">
-              <h3>📊 상태별 분포</h3>
-              <div class="status-bars-mini">
-                <div class="status-item-mini">
-                  <span class="status-label-mini good">✅ Good</span>
-                  <span class="status-value-mini" id="goodCount">0개 (0%)</span>
-                </div>
-                <div class="status-item-mini">
-                  <span class="status-label-mini warning">⚠️ Needs Improvement</span>
-                  <span class="status-value-mini" id="warningCount">0개 (0%)</span>
-                </div>
-                <div class="status-item-mini">
-                  <span class="status-label-mini poor">❌ Poor</span>
-                  <span class="status-value-mini" id="poorCount">0개 (0%)</span>
-                </div>
-              </div>
-            </div>
 
           <!-- 네트워크별 비교 -->
           <div class="network-section">
@@ -848,6 +839,26 @@
         </div>
         <div class="modal-footer">
           <button onclick="closeLoginHistoryModal()" class="btn btn-secondary">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 개선사항 Report 모달 -->
+    <div id="improvementReportModal" class="modal">
+      <div class="modal-content improvement-report-modal">
+        <div class="modal-header">
+          <h2>📋 개선사항 Report</h2>
+          <span class="report-date-range" id="reportDateRange"></span>
+          <button onclick="closeImprovementReportModal()" class="close-btn">✕</button>
+        </div>
+        <div class="modal-body" id="improvementReportBody">
+          <div class="report-loading">
+            <div class="spinner"></div>
+            <p>개선사항을 분석하고 있습니다...</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button onclick="closeImprovementReportModal()" class="btn btn-secondary">닫기</button>
         </div>
       </div>
     </div>

@@ -171,6 +171,50 @@ async function getStats() {
   };
 }
 
+// ==================== Improvement Report ====================
+
+async function getRecentMeasurementsWithIssues(days = 10) {
+  // 최근 N일간의 측정 데이터 조회 (suggestions가 있는 것만)
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceStr = since.toISOString();
+
+  return await supabaseRequest('measurements', {
+    select: 'id,url,site_name,page_detail,network,suggestions,measured_at',
+    filters: `measured_at=gte.${sinceStr}&suggestions=not.is.null&order=measured_at.desc`
+  });
+}
+
+// ==================== Improvement Suggestions Cache ====================
+
+async function getImprovementSuggestions() {
+  return await supabaseRequest('improvement_suggestions', {
+    select: '*',
+    filters: 'order=id.asc'
+  });
+}
+
+async function saveImprovementSuggestion(issueKey, solution) {
+  // upsert: 있으면 업데이트, 없으면 삽입
+  const existing = await supabaseRequest('improvement_suggestions', {
+    select: 'id',
+    filters: `issue_key=eq.${encodeURIComponent(issueKey)}`
+  });
+
+  if (existing && existing.length > 0) {
+    await supabaseRequest(`improvement_suggestions?id=eq.${existing[0].id}`, {
+      method: 'PATCH',
+      body: { solution, updated_at: new Date().toISOString() }
+    });
+  } else {
+    await supabaseRequest('improvement_suggestions', {
+      method: 'POST',
+      body: { issue_key: issueKey, solution, created_at: new Date().toISOString() }
+    });
+  }
+  return { success: true };
+}
+
 module.exports = {
   getAllUrls,
   getActiveUrls,
@@ -180,5 +224,8 @@ module.exports = {
   getMeasurements,
   saveMeasurement,
   deleteAllMeasurements,
-  getStats
+  getStats,
+  getRecentMeasurementsWithIssues,
+  getImprovementSuggestions,
+  saveImprovementSuggestion
 };
