@@ -453,7 +453,7 @@ app.post('/api/generate-solution', auth.authMiddleware, async (req, res) => {
 (사이드 이펙트, 호환성 등)`;
 
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`,
       {
         contents: [{
           parts: [{ text: prompt }]
