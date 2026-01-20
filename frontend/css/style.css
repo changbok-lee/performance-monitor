@@ -2170,7 +2170,7 @@ nav {
 }
 
 .improvement-report-modal .modal-body {
-  padding: 20px 25px;
+  padding: 0 25px 20px 25px;
   max-height: 65vh;
   overflow-y: auto;
 }
@@ -2208,7 +2208,6 @@ nav {
   position: sticky;
   top: 0;
   z-index: 10;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .improvement-table th:first-child {
