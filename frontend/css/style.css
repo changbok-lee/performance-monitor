@@ -2207,11 +2207,19 @@ nav {
   border-bottom: 2px solid #dee2e6;
   position: sticky;
   top: 0;
+  z-index: 10;
 }
 
 .improvement-table th:first-child {
   width: 50px;
   text-align: center;
+}
+
+/* 문제점 컬럼 너비 2배 */
+.improvement-table th.issue-col,
+.improvement-table td.issue-col {
+  min-width: 300px;
+  width: 35%;
 }
 
 .improvement-table td {
@@ -2276,6 +2284,13 @@ nav {
   gap: 4px;
 }
 
+/* 페이지 태그 세로 정렬 (개선사항 Report용) */
+.page-tags-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .page-tag {
   display: inline-block;
   padding: 2px 8px;
@@ -2283,6 +2298,7 @@ nav {
   color: #0056b3;
   border-radius: 10px;
   font-size: 0.8em;
+  white-space: nowrap;
 }
 
 /* 개선 제안 영역 */
@@ -2375,7 +2391,7 @@ nav {
 }
 
 .btn-expand,
-.btn-copy,
+.btn-regenerate,
 .btn-generate {
   padding: 5px 12px;
   border: none;
@@ -2397,13 +2413,13 @@ nav {
   background: #dee2e6;
 }
 
-.btn-copy {
-  background: #d4edda;
-  color: #155724;
+.btn-regenerate {
+  background: #fff3cd;
+  color: #856404;
 }
 
-.btn-copy:hover {
-  background: #c3e6cb;
+.btn-regenerate:hover {
+  background: #ffeeba;
 }
 
 .btn-generate {

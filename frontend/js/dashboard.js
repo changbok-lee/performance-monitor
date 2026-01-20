@@ -1280,8 +1280,8 @@ async function showImprovementReportModal() {
         <thead>
           <tr>
             <th>순위</th>
-            <th>주요문제점</th>
-            <th>연관 페이지</th>
+            <th class="issue-col">문제점</th>
+            <th>영역</th>
             <th class="solution-cell">개선제안</th>
           </tr>
         </thead>
@@ -1317,7 +1317,7 @@ function renderIssueRow(issue) {
       <td style="text-align: center;">
         <span class="rank-badge ${isTop3 ? 'top3' : 'normal'}">${issue.rank}</span>
       </td>
-      <td>
+      <td class="issue-col">
         <div class="issue-title">${issue.title}</div>
         <div class="issue-stats">
           <span class="count">${issue.count}회 발생</span> ·
@@ -1325,7 +1325,7 @@ function renderIssueRow(issue) {
         </div>
       </td>
       <td>
-        <div class="page-tags">
+        <div class="page-tags-vertical">
           ${issue.pageDetails.length > 0
             ? issue.pageDetails.map(p => `<span class="page-tag">${p}</span>`).join('')
             : '<span style="color:#888">-</span>'
@@ -1341,8 +1341,8 @@ function renderIssueRow(issue) {
               <button class="btn-expand" onclick="toggleSolution(${issue.rank})">
                 📖 펼치기
               </button>
-              <button class="btn-copy" onclick="copySolution(${issue.rank}, '${escapeForAttr(issue.solution)}')">
-                📋 복사
+              <button class="btn-regenerate" onclick="generateSolution(${issue.rank}, '${escapeForAttr(issue.title)}')">
+                🔄 다시 답변받기
               </button>
             </div>
           ` : `
@@ -1456,8 +1456,8 @@ async function generateSolution(rank, issueTitle) {
         <button class="btn-expand" onclick="toggleSolution(${rank})">
           📕 접기
         </button>
-        <button class="btn-copy" onclick="copySolution(${rank}, '${escapeForAttr(solution)}')">
-          📋 복사
+        <button class="btn-regenerate" onclick="generateSolution(${rank}, '${escapeForAttr(issueTitle)}')">
+          🔄 다시 답변받기
         </button>
       </div>
     `;
