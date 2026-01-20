@@ -921,18 +921,24 @@ function displayHistoryTable(history) {
     return bDate - aDate;
   });
 
-  tbody.innerHTML = sortedHistory.map((h, index) => `
+  tbody.innerHTML = sortedHistory.map((h, index) => {
+    // performance_score가 없거나 0이면 실패 처리
+    const hasValidScore = h.performance_score && h.performance_score > 0;
+    const displayStatus = hasValidScore ? h.status : 'Failed';
+
+    return `
     <tr>
       <td>${index + 1}</td>
       <td>${formatDateTime(h.measured_at)}</td>
-      <td>${h.performance_score || '-'}</td>
-      <td><span class="status-badge status-${h.status.toLowerCase().replace(' ', '-')}">${getStatusKorean(h.status)}</span></td>
-      <td>${h.fcp != null ? h.fcp.toFixed(2) + 's' : '-'}</td>
-      <td>${h.lcp != null ? h.lcp.toFixed(2) + 's' : '-'}</td>
-      <td>${h.tbt != null ? Math.round(h.tbt) + 'ms' : '-'}</td>
-      <td>${h.speed_index != null ? h.speed_index.toFixed(2) + 's' : '-'}</td>
+      <td>${hasValidScore ? h.performance_score : '-'}</td>
+      <td><span class="status-badge status-${displayStatus.toLowerCase().replace(' ', '-')}">${getStatusKorean(displayStatus)}</span></td>
+      <td>${hasValidScore && h.fcp != null ? h.fcp.toFixed(2) + 's' : '-'}</td>
+      <td>${hasValidScore && h.lcp != null ? h.lcp.toFixed(2) + 's' : '-'}</td>
+      <td>${hasValidScore && h.tbt != null ? Math.round(h.tbt) + 'ms' : '-'}</td>
+      <td>${hasValidScore && h.speed_index != null ? h.speed_index.toFixed(2) + 's' : '-'}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // ==================== 최신 측정 분석 ====================
