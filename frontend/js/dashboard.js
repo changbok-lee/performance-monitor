@@ -247,13 +247,17 @@ function displayStatusDistribution(measurements) {
   };
 
   dailyMeasurements.forEach(m => {
-    if (m.status === 'Good') {
+    // performance_score가 없거나 0이면 실패 처리
+    const hasValidScore = m.performance_score && m.performance_score > 0;
+    const actualStatus = hasValidScore ? m.status : 'Failed';
+
+    if (actualStatus === 'Good') {
       statusCounts['Good']++;
-    } else if (m.status === 'Needs Improvement') {
+    } else if (actualStatus === 'Needs Improvement') {
       statusCounts['Needs Improvement']++;
-    } else if (m.status === 'Poor') {
+    } else if (actualStatus === 'Poor') {
       statusCounts['Poor']++;
-    } else if (m.status === 'Failed') {
+    } else {
       statusCounts['Failed']++;
     }
   });
