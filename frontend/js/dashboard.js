@@ -185,10 +185,11 @@ function displaySummary(measurements) {
   const validScores = measurements.filter(m => m.performance_score > 0);
   const avgScore = validScores.reduce((sum, m) => sum + m.performance_score, 0) / validScores.length;
 
-  const uniqueUrls = [...new Set(measurements.map(m => m.url))];
+  // URL+네트워크 조합으로 카운트 (Mobile, Desktop 각각)
+  const uniqueUrlNetworks = [...new Set(measurements.map(m => `${m.url}|${m.network}`))];
 
   avgPerf.textContent = Math.round(avgScore);
-  totalUrls.textContent = uniqueUrls.length;
+  totalUrls.textContent = uniqueUrlNetworks.length;
   totalMeas.textContent = measurements.length;
 }
 
@@ -280,43 +281,67 @@ function displayStatusDistribution(measurements) {
 // ==================== 네트워크 비교 ====================
 
 function displayNetworkComparison(measurements) {
+  // Mobile (4G)
   const mobilePerf = document.getElementById('mobilePerf');
   const mobileFcp = document.getElementById('mobileFcp');
   const mobileLcp = document.getElementById('mobileLcp');
+  const mobileTbt = document.getElementById('mobileTbt');
+
+  // Mobile (5G)
+  const mobile5gPerf = document.getElementById('mobile5gPerf');
+  const mobile5gFcp = document.getElementById('mobile5gFcp');
+  const mobile5gLcp = document.getElementById('mobile5gLcp');
+  const mobile5gTbt = document.getElementById('mobile5gTbt');
+
+  // Desktop
   const desktopPerf = document.getElementById('desktopPerf');
   const desktopFcp = document.getElementById('desktopFcp');
   const desktopLcp = document.getElementById('desktopLcp');
-  
-  if (!mobilePerf || !mobileFcp || !mobileLcp || !desktopPerf || !desktopFcp || !desktopLcp) {
+  const desktopTbt = document.getElementById('desktopTbt');
+
+  if (!mobilePerf || !desktopPerf) {
     console.warn('Network comparison 요소를 찾을 수 없습니다.');
     return;
   }
-  
+
   const mobileData = measurements.filter(m => m.network === 'Mobile');
+  const mobile5gData = measurements.filter(m => m.network === 'Mobile_5G');
   const desktopData = measurements.filter(m => m.network === 'Desktop');
-  
+
   function calculateAverage(data) {
-    if (data.length === 0) return { score: 0, fcp: 0, lcp: 0 };
+    if (data.length === 0) return { score: 0, fcp: 0, lcp: 0, tbt: 0 };
     const validData = data.filter(m => m.performance_score > 0);
-    if (validData.length === 0) return { score: 0, fcp: 0, lcp: 0 };
-    
+    if (validData.length === 0) return { score: 0, fcp: 0, lcp: 0, tbt: 0 };
+
     return {
       score: Math.round(validData.reduce((sum, m) => sum + m.performance_score, 0) / validData.length),
       fcp: (validData.reduce((sum, m) => sum + m.fcp, 0) / validData.length).toFixed(2),
-      lcp: (validData.reduce((sum, m) => sum + m.lcp, 0) / validData.length).toFixed(2)
+      lcp: (validData.reduce((sum, m) => sum + m.lcp, 0) / validData.length).toFixed(2),
+      tbt: Math.round(validData.reduce((sum, m) => sum + m.tbt, 0) / validData.length)
     };
   }
-  
+
   const mobileAvg = calculateAverage(mobileData);
+  const mobile5gAvg = calculateAverage(mobile5gData);
   const desktopAvg = calculateAverage(desktopData);
-  
+
+  // Mobile (4G)
   mobilePerf.textContent = mobileAvg.score || '-';
   mobileFcp.textContent = mobileAvg.fcp ? mobileAvg.fcp + 's' : '-';
   mobileLcp.textContent = mobileAvg.lcp ? mobileAvg.lcp + 's' : '-';
-  
+  if (mobileTbt) mobileTbt.textContent = mobileAvg.tbt ? mobileAvg.tbt + 'ms' : '-';
+
+  // Mobile (5G)
+  if (mobile5gPerf) mobile5gPerf.textContent = mobile5gAvg.score || '-';
+  if (mobile5gFcp) mobile5gFcp.textContent = mobile5gAvg.fcp ? mobile5gAvg.fcp + 's' : '-';
+  if (mobile5gLcp) mobile5gLcp.textContent = mobile5gAvg.lcp ? mobile5gAvg.lcp + 's' : '-';
+  if (mobile5gTbt) mobile5gTbt.textContent = mobile5gAvg.tbt ? mobile5gAvg.tbt + 'ms' : '-';
+
+  // Desktop
   desktopPerf.textContent = desktopAvg.score || '-';
   desktopFcp.textContent = desktopAvg.fcp ? desktopAvg.fcp + 's' : '-';
   desktopLcp.textContent = desktopAvg.lcp ? desktopAvg.lcp + 's' : '-';
+  if (desktopTbt) desktopTbt.textContent = desktopAvg.tbt ? desktopAvg.tbt + 'ms' : '-';
 }
 
 // ==================== 성능 추이 차트 (백업 HTML ID) ====================

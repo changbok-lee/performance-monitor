@@ -155,10 +155,11 @@
                 <span class="stat-label">📊 전체 평균</span>
                 <span class="stat-value" id="avgPerformance">-</span>
               </div>
-              <div class="stat-item">
+              <div class="stat-item stat-item-button" onclick="switchTab('results')">
                 <span class="stat-label">🔗 측정된 URL</span>
                 <span class="stat-value" id="totalUrls">-</span>
                 <span class="stat-unit">개</span>
+                <span class="stat-arrow">→</span>
               </div>
               <div class="stat-item">
                 <span class="stat-label">📈 총 측정 횟수</span>
@@ -200,11 +201,11 @@
 
           <!-- 네트워크별 비교 -->
           <div class="network-section">
-          <h3>📱 Mobile vs 💻 Desktop</h3>
-          <p class="network-info">Mobile: Slow 4G (400Kbps) | Desktop: Cable (100Mbps)</p>
+          <h3>📱 Mobile vs 📱 Mobile (5G) vs 💻 Desktop</h3>
+          <p class="network-info">Mobile: Slow 4G (400Kbps) | Mobile 5G: 5G (10Mbps) | Desktop: Cable (100Mbps)</p>
           <div class="network-comparison-mini">
               <div class="network-card-mini">
-              <h4>📱 Mobile</h4>
+              <h4>📱 Mobile (4G)</h4>
               <div class="network-metrics">
                   <div class="network-metric">
                   <span>Performance</span>
@@ -217,6 +218,32 @@
                   <div class="network-metric">
                   <span>LCP</span>
                   <strong id="mobileLcp">-</strong>
+                  </div>
+                  <div class="network-metric">
+                  <span>TBT</span>
+                  <strong id="mobileTbt">-</strong>
+                  </div>
+              </div>
+              </div>
+
+              <div class="network-card-mini">
+              <h4>📱 Mobile (5G)</h4>
+              <div class="network-metrics">
+                  <div class="network-metric">
+                  <span>Performance</span>
+                  <strong id="mobile5gPerf">-</strong>
+                  </div>
+                  <div class="network-metric">
+                  <span>FCP</span>
+                  <strong id="mobile5gFcp">-</strong>
+                  </div>
+                  <div class="network-metric">
+                  <span>LCP</span>
+                  <strong id="mobile5gLcp">-</strong>
+                  </div>
+                  <div class="network-metric">
+                  <span>TBT</span>
+                  <strong id="mobile5gTbt">-</strong>
                   </div>
               </div>
               </div>
@@ -235,6 +262,10 @@
                   <div class="network-metric">
                   <span>LCP</span>
                   <strong id="desktopLcp">-</strong>
+                  </div>
+                  <div class="network-metric">
+                  <span>TBT</span>
+                  <strong id="desktopTbt">-</strong>
                   </div>
               </div>
               </div>
