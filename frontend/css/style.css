@@ -2208,6 +2208,7 @@ nav {
   position: sticky;
   top: 0;
   z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .improvement-table th:first-child {
@@ -2215,11 +2216,10 @@ nav {
   text-align: center;
 }
 
-/* 문제점 컬럼 너비 2배 */
+/* 문제점 컬럼 - 텍스트에 맞게 */
 .improvement-table th.issue-col,
 .improvement-table td.issue-col {
-  min-width: 300px;
-  width: 35%;
+  white-space: nowrap;
 }
 
 .improvement-table td {
@@ -2340,6 +2340,12 @@ nav {
 
 .solution-full.show {
   display: block;
+}
+
+/* 펼쳤을 때 미리보기 숨기기 */
+.solution-full.show ~ .solution-buttons + .solution-preview,
+.solution-content:has(.solution-full.show) .solution-preview {
+  display: none;
 }
 
 .solution-full h2 {
