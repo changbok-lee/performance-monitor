@@ -2145,7 +2145,7 @@ nav {
 /* ==================== 개선사항 Report 모달 ==================== */
 
 .improvement-report-modal {
-  max-width: 1100px;
+  max-width: 1400px;
   width: 95%;
   max-height: 90vh;
 }
@@ -2288,6 +2288,7 @@ nav {
 /* 개선 제안 영역 */
 .solution-cell {
   min-width: 280px;
+  text-align: left;
 }
 
 .solution-content {
@@ -2300,6 +2301,7 @@ nav {
   color: #555;
   font-size: 0.85em;
   line-height: 1.5;
+  text-align: left;
 }
 
 .solution-preview.expanded {
@@ -2317,6 +2319,7 @@ nav {
   color: #333;
   white-space: pre-wrap;
   word-break: break-word;
+  text-align: left;
 }
 
 .solution-full.show {
