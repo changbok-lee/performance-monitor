@@ -1830,7 +1830,7 @@ nav {
 /* 네트워크 비교 미니 */
 .network-comparison-mini {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 15px;
 }
 

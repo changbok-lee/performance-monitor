@@ -86,6 +86,7 @@ function extractOpportunities(lighthouseResult) {
   const audits = lighthouseResult.audits;
   const opportunities = [];
 
+  // 더 많은 Lighthouse audit 항목 추가 (15개 → 25개)
   const opportunityAudits = [
     'render-blocking-resources',
     'unused-css-rules',
@@ -101,7 +102,18 @@ function extractOpportunities(lighthouseResult) {
     'uses-optimized-images',
     'uses-text-compression',
     'uses-responsive-images',
-    'server-response-time'
+    'server-response-time',
+    // 추가 audit 항목들
+    'mainthread-work-breakdown',
+    'bootup-time',
+    'dom-size',
+    'font-display',
+    'third-party-summary',
+    'largest-contentful-paint-element',
+    'layout-shift-elements',
+    'long-tasks',
+    'non-composited-animations',
+    'unsized-images'
   ];
 
   const auditLabels = {
@@ -119,7 +131,18 @@ function extractOpportunities(lighthouseResult) {
     'uses-optimized-images': '이미지 최적화',
     'uses-text-compression': '텍스트 압축 사용',
     'uses-responsive-images': '반응형 이미지 사용',
-    'server-response-time': '서버 응답 시간 단축'
+    'server-response-time': '서버 응답 시간 단축',
+    // 추가 audit 라벨
+    'mainthread-work-breakdown': '메인 스레드 작업 최소화',
+    'bootup-time': 'JavaScript 실행 시간 단축',
+    'dom-size': 'DOM 크기 줄이기',
+    'font-display': '웹폰트 로딩 최적화',
+    'third-party-summary': '서드파티 코드 영향 줄이기',
+    'largest-contentful-paint-element': 'LCP 요소 최적화',
+    'layout-shift-elements': '레이아웃 시프트 유발 요소 수정',
+    'long-tasks': '긴 작업 분할하기',
+    'non-composited-animations': '합성 애니메이션 사용',
+    'unsized-images': '이미지 크기 명시'
   };
 
   opportunityAudits.forEach(auditId => {
@@ -137,7 +160,8 @@ function extractOpportunities(lighthouseResult) {
     }
   });
 
-  return opportunities.slice(0, 5);
+  // 더 많은 개선사항 수집 (5개 → 15개)
+  return opportunities.slice(0, 15);
 }
 
 // ==================== 성능 측정 ====================

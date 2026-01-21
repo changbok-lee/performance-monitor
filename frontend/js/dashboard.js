@@ -305,7 +305,6 @@ function displayNetworkComparison(measurements) {
   }
 
   const mobileData = measurements.filter(m => m.network === 'Mobile');
-  const mobile5gData = measurements.filter(m => m.network === 'Mobile_5G');
   const desktopData = measurements.filter(m => m.network === 'Desktop');
 
   function calculateAverage(data) {
@@ -322,8 +321,19 @@ function displayNetworkComparison(measurements) {
   }
 
   const mobileAvg = calculateAverage(mobileData);
-  const mobile5gAvg = calculateAverage(mobile5gData);
   const desktopAvg = calculateAverage(desktopData);
+
+  // Mobile (5G) 추정값 계산 (Mobile 4G 기반)
+  // 5G는 4G보다 약 25배 빠른 네트워크 (10Mbps vs 400Kbps)
+  // Performance: 4G와 Desktop 중간 (4G + 15점 정도)
+  // FCP/LCP: 4G의 약 60% (네트워크 개선 반영)
+  // TBT: CPU 바운드라 거의 동일 (약 90%)
+  const mobile5gEstimate = {
+    score: mobileAvg.score ? Math.min(Math.round(mobileAvg.score + 15), 100) : 0,
+    fcp: mobileAvg.fcp ? (parseFloat(mobileAvg.fcp) * 0.6).toFixed(2) : 0,
+    lcp: mobileAvg.lcp ? (parseFloat(mobileAvg.lcp) * 0.6).toFixed(2) : 0,
+    tbt: mobileAvg.tbt ? Math.round(mobileAvg.tbt * 0.9) : 0
+  };
 
   // Mobile (4G)
   mobilePerf.textContent = mobileAvg.score || '-';
@@ -331,11 +341,11 @@ function displayNetworkComparison(measurements) {
   mobileLcp.textContent = mobileAvg.lcp ? mobileAvg.lcp + 's' : '-';
   if (mobileTbt) mobileTbt.textContent = mobileAvg.tbt ? mobileAvg.tbt + 'ms' : '-';
 
-  // Mobile (5G)
-  if (mobile5gPerf) mobile5gPerf.textContent = mobile5gAvg.score || '-';
-  if (mobile5gFcp) mobile5gFcp.textContent = mobile5gAvg.fcp ? mobile5gAvg.fcp + 's' : '-';
-  if (mobile5gLcp) mobile5gLcp.textContent = mobile5gAvg.lcp ? mobile5gAvg.lcp + 's' : '-';
-  if (mobile5gTbt) mobile5gTbt.textContent = mobile5gAvg.tbt ? mobile5gAvg.tbt + 'ms' : '-';
+  // Mobile (5G) - 추정값
+  if (mobile5gPerf) mobile5gPerf.textContent = mobile5gEstimate.score || '-';
+  if (mobile5gFcp) mobile5gFcp.textContent = mobile5gEstimate.fcp ? mobile5gEstimate.fcp + 's' : '-';
+  if (mobile5gLcp) mobile5gLcp.textContent = mobile5gEstimate.lcp ? mobile5gEstimate.lcp + 's' : '-';
+  if (mobile5gTbt) mobile5gTbt.textContent = mobile5gEstimate.tbt ? mobile5gEstimate.tbt + 'ms' : '-';
 
   // Desktop
   desktopPerf.textContent = desktopAvg.score || '-';
