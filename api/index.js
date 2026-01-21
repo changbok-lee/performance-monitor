@@ -241,33 +241,7 @@ app.post('/api/urls', authMiddleware, async (req, res) => {
   }
 });
 
-app.put('/api/urls/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  const { url, site_name, page_detail, network, is_active } = req.body;
-  try {
-    await supabaseRequest(`url_master?id=eq.${id}`, {
-      method: 'PATCH',
-      body: { url, site_name, page_detail, network, is_active }
-    });
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Update URL error:', err);
-    res.status(500).json({ error: 'URL 수정 실패' });
-  }
-});
-
-app.delete('/api/urls/:id', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  try {
-    await supabaseRequest(`url_master?id=eq.${id}`, { method: 'DELETE' });
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Delete URL error:', err);
-    res.status(500).json({ error: 'URL 삭제 실패' });
-  }
-});
-
-// URL 일괄 추가 (엑셀 복사-붙여넣기용)
+// URL 일괄 추가 (엑셀 복사-붙여넣기용) - :id 라우트보다 먼저 정의해야 함
 app.post('/api/urls/bulk', authMiddleware, async (req, res) => {
   const { urls } = req.body;
 
@@ -329,6 +303,32 @@ app.post('/api/urls/bulk', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Bulk URL add error:', err);
     res.status(500).json({ success: false, error: 'URL 일괄 추가 실패: ' + err.message });
+  }
+});
+
+app.put('/api/urls/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { url, site_name, page_detail, network, is_active } = req.body;
+  try {
+    await supabaseRequest(`url_master?id=eq.${id}`, {
+      method: 'PATCH',
+      body: { url, site_name, page_detail, network, is_active }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Update URL error:', err);
+    res.status(500).json({ error: 'URL 수정 실패' });
+  }
+});
+
+app.delete('/api/urls/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await supabaseRequest(`url_master?id=eq.${id}`, { method: 'DELETE' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete URL error:', err);
+    res.status(500).json({ error: 'URL 삭제 실패' });
   }
 });
 
