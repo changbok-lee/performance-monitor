@@ -286,14 +286,14 @@ app.post('/api/urls/bulk', authMiddleware, async (req, res) => {
           continue;
         }
 
+        // is_active 제외 (테이블 기본값 사용)
         await supabaseRequest('url_master', {
           method: 'POST',
           body: {
             url: urlData.url,
             site_name: urlData.site_name || null,
             page_detail: urlData.page_detail || null,
-            network: urlData.network,
-            is_active: 1
+            network: urlData.network
           }
         });
         results.success++;

@@ -112,15 +112,27 @@ async function saveUrls() {
     const result = await response.json();
 
     if (result.success) {
-      alert(`✅ ${result.message}`);
-      
-      // 초기화
-      document.getElementById('pasteArea').value = '';
-      document.getElementById('validationResult').style.display = 'none';
-      parsedData = [];
-      
-      // URL 목록 새로고침
-      loadUrls();
+      let message = `✅ ${result.message}`;
+
+      // 에러 상세 내용이 있으면 표시
+      if (result.results && result.results.errors && result.results.errors.length > 0) {
+        message += '\n\n실패 상세:\n' + result.results.errors.slice(0, 5).join('\n');
+        if (result.results.errors.length > 5) {
+          message += `\n... 외 ${result.results.errors.length - 5}개`;
+        }
+      }
+
+      alert(message);
+
+      // 성공한 것이 있으면 초기화
+      if (result.results && result.results.success > 0) {
+        document.getElementById('pasteArea').value = '';
+        document.getElementById('validationResult').style.display = 'none';
+        parsedData = [];
+
+        // URL 목록 새로고침
+        loadUrls();
+      }
     } else {
       alert('❌ 저장 실패: ' + result.error);
     }
