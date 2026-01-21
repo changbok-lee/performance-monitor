@@ -267,6 +267,53 @@ app.delete('/api/urls/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// URL 일괄 추가 (엑셀 복사-붙여넣기용)
+app.post('/api/urls/bulk', authMiddleware, async (req, res) => {
+  const { urls } = req.body;
+
+  if (!urls || !Array.isArray(urls) || urls.length === 0) {
+    return res.status(400).json({ success: false, error: 'URL 목록이 필요합니다.' });
+  }
+
+  try {
+    const results = { success: 0, failed: 0, errors: [] };
+
+    for (const urlData of urls) {
+      try {
+        if (!urlData.url || !urlData.network) {
+          results.failed++;
+          results.errors.push(`URL 또는 네트워크 누락: ${urlData.url || 'unknown'}`);
+          continue;
+        }
+
+        await supabaseRequest('url_master', {
+          method: 'POST',
+          body: {
+            url: urlData.url,
+            site_name: urlData.site_name || null,
+            page_detail: urlData.page_detail || null,
+            network: urlData.network,
+            is_active: 1
+          }
+        });
+        results.success++;
+      } catch (err) {
+        results.failed++;
+        results.errors.push(`${urlData.url}: ${err.message}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `${results.success}개 URL 추가 완료, ${results.failed}개 실패`,
+      results
+    });
+  } catch (err) {
+    console.error('Bulk URL add error:', err);
+    res.status(500).json({ success: false, error: 'URL 일괄 추가 실패: ' + err.message });
+  }
+});
+
 app.get('/api/measurement-status', authMiddleware, (req, res) => {
   res.json({ isRunning: false, total: 0, completed: 0, failed: 0 });
 });
