@@ -232,7 +232,7 @@ app.post('/api/urls', authMiddleware, async (req, res) => {
   try {
     const result = await supabaseRequest('url_master', {
       method: 'POST',
-      body: { url, site_name, page_detail, network }
+      body: { url, site_name, page_detail, network, is_active: 1 }
     });
     res.json({ success: true, id: result[0]?.id });
   } catch (err) {
@@ -276,7 +276,13 @@ app.post('/api/urls/bulk', authMiddleware, async (req, res) => {
   }
 
   try {
-    const results = { success: 0, failed: 0, errors: [] };
+    // 기존 URL 목록 조회 (중복 체크용)
+    const existingUrls = await supabaseRequest('url_master', {
+      select: 'url,network'
+    });
+    const existingSet = new Set(existingUrls.map(u => `${u.url}|${u.network}`));
+
+    const results = { success: 0, failed: 0, skipped: 0, errors: [] };
 
     for (const urlData of urls) {
       try {
@@ -286,26 +292,38 @@ app.post('/api/urls/bulk', authMiddleware, async (req, res) => {
           continue;
         }
 
-        // is_active 제외 (테이블 기본값 사용)
+        // 중복 체크
+        const key = `${urlData.url}|${urlData.network}`;
+        if (existingSet.has(key)) {
+          results.skipped++;
+          continue;
+        }
+
         await supabaseRequest('url_master', {
           method: 'POST',
           body: {
             url: urlData.url,
             site_name: urlData.site_name || null,
             page_detail: urlData.page_detail || null,
-            network: urlData.network
+            network: urlData.network,
+            is_active: 1
           }
         });
         results.success++;
+        existingSet.add(key); // 추가된 URL도 중복 체크에 포함
       } catch (err) {
         results.failed++;
         results.errors.push(`${urlData.url}: ${err.message}`);
       }
     }
 
+    let message = `${results.success}개 URL 추가 완료`;
+    if (results.skipped > 0) message += `, ${results.skipped}개 중복 스킵`;
+    if (results.failed > 0) message += `, ${results.failed}개 실패`;
+
     res.json({
       success: true,
-      message: `${results.success}개 URL 추가 완료, ${results.failed}개 실패`,
+      message,
       results
     });
   } catch (err) {
