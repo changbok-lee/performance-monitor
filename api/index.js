@@ -324,11 +324,26 @@ app.put('/api/urls/:id', authMiddleware, async (req, res) => {
 app.delete('/api/urls/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
+    // 먼저 해당 URL 정보 조회 (url, network로 measurements 삭제용)
+    const urlInfo = await supabaseRequest('url_master', {
+      select: 'url,network',
+      filters: `id=eq.${id}`
+    });
+
+    if (urlInfo && urlInfo.length > 0) {
+      const { url, network } = urlInfo[0];
+      // 관련 measurements 먼저 삭제
+      await supabaseRequest(`measurements?url=eq.${encodeURIComponent(url)}&network=eq.${network}`, {
+        method: 'DELETE'
+      });
+    }
+
+    // URL 삭제
     await supabaseRequest(`url_master?id=eq.${id}`, { method: 'DELETE' });
     res.json({ success: true });
   } catch (err) {
-    console.error('Delete URL error:', err);
-    res.status(500).json({ error: 'URL 삭제 실패' });
+    console.error('Delete URL error:', err.message);
+    res.status(500).json({ error: 'URL 삭제 실패: ' + err.message });
   }
 });
 
