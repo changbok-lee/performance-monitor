@@ -44,18 +44,21 @@ jobs:
             echo "type=${{ github.event.inputs.network }}" >> $GITHUB_OUTPUT
             echo "🎯 Manual execution: ${{ github.event.inputs.network }}"
           else
-            # 스케줄 실행 시 시간 기반 자동 결정
-            HOUR=$(date -u +%H)
+            # 스케줄 실행 시 cron 표현식으로 네트워크 결정
+            # github.event.schedule: 트리거한 cron 표현식 반환
+            CRON="${{ github.event.schedule }}"
+            echo "📅 Triggered by cron: $CRON"
 
-            if [ "$HOUR" == "16" ]; then
+            if [ "$CRON" == "0 16 * * *" ]; then
               echo "type=Mobile" >> $GITHUB_OUTPUT
-              echo "📱 Scheduled execution: Mobile (UTC 16:00)"
-            elif [ "$HOUR" == "17" ]; then
+              echo "📱 Scheduled execution: Mobile (UTC 16:00 / KST 01:00)"
+            elif [ "$CRON" == "30 17 * * *" ]; then
               echo "type=Desktop" >> $GITHUB_OUTPUT
-              echo "💻 Scheduled execution: Desktop (UTC 17:30)"
+              echo "💻 Scheduled execution: Desktop (UTC 17:30 / KST 02:30)"
             else
+              # 알 수 없는 cron인 경우 기본값
               echo "type=Mobile" >> $GITHUB_OUTPUT
-              echo "📱 Default: Mobile"
+              echo "⚠️ Unknown cron, defaulting to Mobile"
             fi
           fi
 
