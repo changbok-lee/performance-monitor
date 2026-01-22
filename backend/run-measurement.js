@@ -1,6 +1,5 @@
 require('dotenv').config();
 const { measurePageSpeed } = require('./src/pagespeed');
-const fs = require('fs');
 
 // ==================== Supabase 설정 ====================
 
@@ -71,16 +70,20 @@ if (!apiKey) {
   process.exit(1);
 }
 
-// ==================== URL 목록 로드 ====================
+// ==================== URL 목록 로드 (Supabase에서) ====================
 
-function loadUrls() {
+async function loadUrls() {
   try {
-    const data = fs.readFileSync('./urls.json', 'utf8');
-    const urls = JSON.parse(data);
-    console.log(`✅ ${urls.length}개 URL 로드 완료`);
+    // Supabase url_master 테이블에서 활성화된 URL 중 현재 네트워크 타입에 맞는 것만 조회
+    const urls = await supabaseRequest('url_master', {
+      select: 'id,url,site_name,page_detail,network',
+      filters: `is_active=eq.1&network=eq.${NETWORK_TYPE}&order=id.asc`
+    });
+
+    console.log(`✅ Supabase에서 ${urls.length}개 URL 로드 완료 (${NETWORK_TYPE})`);
     return urls;
   } catch (error) {
-    console.error('❌ urls.json 파일을 읽을 수 없습니다:', error.message);
+    console.error('❌ Supabase에서 URL 목록을 불러올 수 없습니다:', error.message);
     process.exit(1);
   }
 }
@@ -145,7 +148,7 @@ async function runMeasurements() {
   measurementStatus.completed = 0;
   measurementStatus.failed = 0;
 
-  const urls = loadUrls();
+  const urls = await loadUrls();
   measurementStatus.total = urls.length;
 
   let completed = 0;
