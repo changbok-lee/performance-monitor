@@ -347,6 +347,14 @@ app.delete('/api/urls/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// 수동 측정 시작 (Vercel 서버리스 환경에서는 지원 불가)
+app.post('/api/measure', authMiddleware, (req, res) => {
+  res.status(400).json({
+    success: false,
+    message: 'Vercel 서버리스 환경에서는 수동 측정이 지원되지 않습니다.\n\nGitHub Actions에서 수동으로 실행해주세요:\n1. GitHub 저장소 → Actions 탭\n2. "Scheduled Performance Measurement" 워크플로우 선택\n3. "Run workflow" 버튼 클릭\n4. 네트워크 타입 선택 후 실행'
+  });
+});
+
 app.get('/api/measurement-status', authMiddleware, (req, res) => {
   res.json({ isRunning: false, total: 0, completed: 0, failed: 0 });
 });
