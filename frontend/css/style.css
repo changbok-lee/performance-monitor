@@ -1852,13 +1852,11 @@ nav {
 .network-card-mini.target-card {
   background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
   border-color: #e6c200;
-  padding: 10px;
 }
 
 .network-card-mini.target-card h4 {
   color: #856404;
   font-size: 0.8em;
-  margin-bottom: 8px;
 }
 
 .target-value {
