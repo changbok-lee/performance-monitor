@@ -1830,38 +1830,54 @@ nav {
 /* 네트워크 비교 미니 */
 .network-comparison-mini {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
+  grid-template-columns: 0.7fr repeat(3, 1fr);
+  gap: 12px;
 }
 
 .network-card-mini {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 15px;
+  padding: 12px;
   border-radius: 10px;
   border: 2px solid #dee2e6;
 }
 
 .network-card-mini h4 {
-  margin: 0 0 12px 0;
-  font-size: 1em;
+  margin: 0 0 10px 0;
+  font-size: 0.95em;
   color: #333;
   text-align: center;
+}
+
+/* 만족 기준 카드 */
+.network-card-mini.target-card {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  border-color: #28a745;
+}
+
+.network-card-mini.target-card h4 {
+  color: #155724;
+  font-size: 0.85em;
+}
+
+.target-value {
+  color: #28a745 !important;
+  font-weight: bold;
 }
 
 .network-metrics {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .network-metric {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
+  padding: 5px 8px;
   background: white;
   border-radius: 6px;
-  font-size: 0.85em;
+  font-size: 0.8em;
 }
 
 .network-metric span {
@@ -1870,7 +1886,7 @@ nav {
 
 .network-metric strong {
   color: #667eea;
-  font-size: 1.1em;
+  font-size: 1em;
 }
 
 /* 성능 추이 차트 섹션 */
@@ -1892,6 +1908,12 @@ nav {
   .summary-top-row {
     flex-direction: column;
     gap: 20px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .network-comparison-mini {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
