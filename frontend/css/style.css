@@ -1830,7 +1830,7 @@ nav {
 /* 네트워크 비교 미니 */
 .network-comparison-mini {
   display: grid;
-  grid-template-columns: 0.7fr repeat(3, 1fr);
+  grid-template-columns: 0.55fr repeat(3, 1fr);
   gap: 12px;
 }
 
@@ -1850,17 +1850,19 @@ nav {
 
 /* 만족 기준 카드 */
 .network-card-mini.target-card {
-  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-  border-color: #28a745;
+  background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+  border-color: #e6c200;
+  padding: 10px;
 }
 
 .network-card-mini.target-card h4 {
-  color: #155724;
-  font-size: 0.85em;
+  color: #856404;
+  font-size: 0.8em;
+  margin-bottom: 8px;
 }
 
 .target-value {
-  color: #28a745 !important;
+  color: #b38f00 !important;
   font-weight: bold;
 }
 
