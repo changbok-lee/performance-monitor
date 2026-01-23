@@ -149,19 +149,20 @@ function extractOpportunities(lighthouseResult) {
     const audit = audits[auditId];
     if (audit && audit.score !== null && audit.score < 1) {
       const savings = audit.numericValue || 0;
-      if (savings > 100) {
+      // 50ms 이상이면 수집 (기존 100ms → 50ms로 완화)
+      if (savings > 50) {
         const label = auditLabels[auditId] || auditId;
-        const savingsText = savings > 1000 
+        const savingsText = savings > 1000
           ? `약 ${(savings / 1000).toFixed(1)}초 개선 가능`
           : `약 ${savings.toFixed(0)}ms 개선 가능`;
-        
+
         opportunities.push(`${label}: ${savingsText}`);
       }
     }
   });
 
-  // 더 많은 개선사항 수집 (5개 → 15개)
-  return opportunities.slice(0, 15);
+  // 더 많은 개선사항 수집 (최대 20개)
+  return opportunities.slice(0, 20);
 }
 
 // ==================== 성능 측정 ====================
