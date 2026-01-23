@@ -1678,6 +1678,20 @@ nav {
   font-weight: bold;
 }
 
+.stat-link {
+  font-size: 0.85em;
+  color: #28a745;
+  margin-left: auto;
+  font-weight: 600;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.stat-item-button:hover .stat-link {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 .stat-label {
   font-size: 0.9em;
   color: #666;
