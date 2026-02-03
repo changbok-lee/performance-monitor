@@ -218,21 +218,31 @@ async function saveImprovementSuggestion(issueKey, solution) {
 // ==================== Improvement Suggestion History ====================
 
 async function getSuggestionHistory(issueKey) {
-  return await supabaseRequest('improvement_suggestion_history', {
-    select: '*',
-    filters: `issue_key=eq.${encodeURIComponent(issueKey)}&order=created_at.desc`
-  });
+  try {
+    return await supabaseRequest('improvement_suggestion_history', {
+      select: '*',
+      filters: `issue_key=eq.${encodeURIComponent(issueKey)}&order=created_at.desc`
+    });
+  } catch (error) {
+    console.log('히스토리 테이블 조회 실패 (테이블 없음?):', error.message);
+    return [];
+  }
 }
 
 async function saveSuggestionHistory(issueKey, solution) {
-  return await supabaseRequest('improvement_suggestion_history', {
-    method: 'POST',
-    body: {
-      issue_key: issueKey,
-      solution,
-      created_at: new Date().toISOString()
-    }
-  });
+  try {
+    return await supabaseRequest('improvement_suggestion_history', {
+      method: 'POST',
+      body: {
+        issue_key: issueKey,
+        solution,
+        created_at: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.log('히스토리 저장 실패 (테이블 없음?):', error.message);
+    return { success: false };
+  }
 }
 
 module.exports = {

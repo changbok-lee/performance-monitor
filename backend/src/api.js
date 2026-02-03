@@ -519,8 +519,9 @@ app.get('/api/suggestion-history', auth.authMiddleware, async (req, res) => {
       history: history || []
     });
   } catch (error) {
-    console.error('히스토리 조회 실패:', error);
-    res.json({
+    console.error('히스토리 조회 실패:', error.message);
+    // 테이블이 없거나 다른 에러가 발생해도 빈 배열 반환
+    res.status(200).json({
       success: true,
       history: []
     });
