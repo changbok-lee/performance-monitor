@@ -1389,6 +1389,9 @@ function renderIssueRow(issue) {
               <button class="btn-regenerate" onclick="generateSolution(${issue.rank}, '${escapeForAttr(issue.title)}')">
                 🔄 다시 답변받기
               </button>
+              <button class="btn-history" onclick="showSuggestionHistory('${escapeForAttr(issue.title)}')">
+                📚 이전 답변 모아보기
+              </button>
             </div>
           ` : `
             <div class="solution-buttons">
@@ -1504,6 +1507,9 @@ async function generateSolution(rank, issueTitle) {
         <button class="btn-regenerate" onclick="generateSolution(${rank}, '${escapeForAttr(issueTitle)}')">
           🔄 다시 답변받기
         </button>
+        <button class="btn-history" onclick="showSuggestionHistory('${escapeForAttr(issueTitle)}')">
+          📚 이전 답변 모아보기
+        </button>
       </div>
     `;
 
@@ -1529,11 +1535,123 @@ function closeImprovementReportModal() {
   }
 }
 
+// ==================== 이전 답변 모아보기 ====================
+
+async function showSuggestionHistory(issueTitle) {
+  const modal = document.getElementById('suggestionHistoryModal');
+  const body = document.getElementById('suggestionHistoryBody');
+  const titleEl = document.getElementById('historyIssueTitle');
+
+  if (!modal) return;
+
+  modal.style.display = 'flex';
+  titleEl.textContent = issueTitle;
+
+  // 로딩 표시
+  body.innerHTML = `
+    <div class="report-loading">
+      <div class="spinner"></div>
+      <p>이전 답변을 불러오는 중...</p>
+    </div>
+  `;
+
+  try {
+    const token = Auth.getToken();
+    const response = await fetch(`/api/suggestion-history?issueKey=${encodeURIComponent(issueTitle)}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('이전 답변 조회 실패');
+    }
+
+    const data = await response.json();
+
+    if (!data.history || data.history.length === 0) {
+      body.innerHTML = `
+        <div class="no-issues">
+          <div class="no-issues-icon">📭</div>
+          <p>이전에 생성된 답변이 없습니다.</p>
+          <p style="font-size: 0.9em; color: #aaa;">'다시 답변받기'를 클릭하면 새로운 답변이 기록됩니다.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // 히스토리 목록 렌더링
+    body.innerHTML = `
+      <div class="history-list">
+        ${data.history.map((item, index) => renderHistoryItem(item, index)).join('')}
+      </div>
+    `;
+
+  } catch (error) {
+    console.error('이전 답변 조회 실패:', error);
+    body.innerHTML = `
+      <div class="no-issues">
+        <div class="no-issues-icon">⚠️</div>
+        <p>이전 답변을 불러오는데 실패했습니다.</p>
+        <p style="font-size: 0.9em; color: #aaa;">${error.message}</p>
+      </div>
+    `;
+  }
+}
+
+function renderHistoryItem(item, index) {
+  const date = new Date(item.created_at);
+  const koreaDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+  const formattedDate = `${koreaDate.getUTCFullYear()}-${String(koreaDate.getUTCMonth() + 1).padStart(2, '0')}-${String(koreaDate.getUTCDate()).padStart(2, '0')} ${String(koreaDate.getUTCHours()).padStart(2, '0')}:${String(koreaDate.getUTCMinutes()).padStart(2, '0')}`;
+
+  // 미리보기: 첫 150자
+  const preview = item.solution
+    ? item.solution.substring(0, 150).replace(/[#*`]/g, '').replace(/\n/g, ' ') + '...'
+    : '';
+
+  return `
+    <div class="history-item" id="history-item-${index}">
+      <div class="history-item-header" onclick="toggleHistoryItem(${index})">
+        <div class="history-item-info">
+          <span class="history-date">📅 ${formattedDate}</span>
+          <span class="history-number">#${index + 1}</span>
+        </div>
+        <div class="history-preview">${preview}</div>
+        <button class="history-toggle-btn" id="history-toggle-btn-${index}">▼ 펼치기</button>
+      </div>
+      <div class="history-item-content" id="history-content-${index}">
+        ${formatSolution(item.solution)}
+      </div>
+    </div>
+  `;
+}
+
+function toggleHistoryItem(index) {
+  const content = document.getElementById(`history-content-${index}`);
+  const btn = document.getElementById(`history-toggle-btn-${index}`);
+
+  if (content.classList.contains('show')) {
+    content.classList.remove('show');
+    btn.innerHTML = '▼ 펼치기';
+  } else {
+    content.classList.add('show');
+    btn.innerHTML = '▲ 접기';
+  }
+}
+
+function closeSuggestionHistoryModal() {
+  const modal = document.getElementById('suggestionHistoryModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
 // ==================== 모달 외부 클릭 ====================
 
 window.onclick = function(event) {
   const detailModal = document.getElementById('detailModal');
   const improvementReportModal = document.getElementById('improvementReportModal');
+  const suggestionHistoryModal = document.getElementById('suggestionHistoryModal');
 
   if (event.target === detailModal) {
     detailModal.style.display = 'none';
@@ -1541,6 +1659,10 @@ window.onclick = function(event) {
 
   if (event.target === improvementReportModal) {
     improvementReportModal.style.display = 'none';
+  }
+
+  if (event.target === suggestionHistoryModal) {
+    suggestionHistoryModal.style.display = 'none';
   }
 
   // loadingModal은 외부 클릭으로 닫히지 않음

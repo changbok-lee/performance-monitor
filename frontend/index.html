@@ -917,6 +917,28 @@
       </div>
     </div>
 
+    <!-- 이전 답변 모아보기 모달 -->
+    <div id="suggestionHistoryModal" class="modal">
+      <div class="modal-content suggestion-history-modal">
+        <div class="modal-header">
+          <h2>📚 이전 답변 모아보기</h2>
+          <button onclick="closeSuggestionHistoryModal()" class="close-btn">✕</button>
+        </div>
+        <div class="modal-subheader">
+          <span id="historyIssueTitle" class="history-issue-title"></span>
+        </div>
+        <div class="modal-body" id="suggestionHistoryBody">
+          <div class="report-loading">
+            <div class="spinner"></div>
+            <p>이전 답변을 불러오는 중...</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button onclick="closeSuggestionHistoryModal()" class="btn btn-secondary">닫기</button>
+        </div>
+      </div>
+    </div>
+
   <script src="js/dashboard.js"></script>
   <script src="js/url-manager.js"></script>
 </body>

@@ -215,6 +215,26 @@ async function saveImprovementSuggestion(issueKey, solution) {
   return { success: true };
 }
 
+// ==================== Improvement Suggestion History ====================
+
+async function getSuggestionHistory(issueKey) {
+  return await supabaseRequest('improvement_suggestion_history', {
+    select: '*',
+    filters: `issue_key=eq.${encodeURIComponent(issueKey)}&order=created_at.desc`
+  });
+}
+
+async function saveSuggestionHistory(issueKey, solution) {
+  return await supabaseRequest('improvement_suggestion_history', {
+    method: 'POST',
+    body: {
+      issue_key: issueKey,
+      solution,
+      created_at: new Date().toISOString()
+    }
+  });
+}
+
 module.exports = {
   getAllUrls,
   getActiveUrls,
@@ -227,5 +247,7 @@ module.exports = {
   getStats,
   getRecentMeasurementsWithIssues,
   getImprovementSuggestions,
-  saveImprovementSuggestion
+  saveImprovementSuggestion,
+  getSuggestionHistory,
+  saveSuggestionHistory
 };

@@ -473,11 +473,18 @@ app.post('/api/generate-solution', auth.authMiddleware, async (req, res) => {
 
     const solution = response.data.candidates[0].content.parts[0].text;
 
-    // 캐시에 저장
+    // 캐시에 저장 (최신 답변)
     try {
       await supabase.saveImprovementSuggestion(issueTitle, solution);
     } catch (e) {
       console.log('캐시 저장 실패 (테이블 없음):', e.message);
+    }
+
+    // 히스토리에도 저장
+    try {
+      await supabase.saveSuggestionHistory(issueTitle, solution);
+    } catch (e) {
+      console.log('히스토리 저장 실패 (테이블 없음):', e.message);
     }
 
     res.json({
@@ -490,6 +497,32 @@ app.post('/api/generate-solution', auth.authMiddleware, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'AI 개선 제안 생성 실패: ' + error.message
+    });
+  }
+});
+
+// 이전 답변 히스토리 조회
+app.get('/api/suggestion-history', auth.authMiddleware, async (req, res) => {
+  const { issueKey } = req.query;
+
+  if (!issueKey) {
+    return res.status(400).json({
+      success: false,
+      error: '문제점 제목(issueKey)이 필요합니다.'
+    });
+  }
+
+  try {
+    const history = await supabase.getSuggestionHistory(issueKey);
+    res.json({
+      success: true,
+      history: history || []
+    });
+  } catch (error) {
+    console.error('히스토리 조회 실패:', error);
+    res.json({
+      success: true,
+      history: []
     });
   }
 });
