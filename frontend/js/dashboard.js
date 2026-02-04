@@ -1942,4 +1942,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const measureButtons = document.getElementById('measureButtons');
     if (measureButtons) measureButtons.style.display = 'none';
   }
+
+  // changbok.lee@imweb.me로 로그인한 경우에만 관리 버튼 표시
+  const currentEmail = Auth.getEmail();
+  if (currentEmail === 'changbok.lee@imweb.me') {
+    const btnRefresh = document.getElementById('btnRefresh');
+    const btnDownloadCSV = document.getElementById('btnDownloadCSV');
+    const btnClearAll = document.getElementById('btnClearAll');
+    if (btnRefresh) btnRefresh.style.display = 'inline-block';
+    if (btnDownloadCSV) btnDownloadCSV.style.display = 'inline-block';
+    if (btnClearAll) btnClearAll.style.display = 'inline-block';
+  }
 });
