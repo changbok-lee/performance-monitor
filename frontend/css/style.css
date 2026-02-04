@@ -2726,12 +2726,13 @@ nav {
   justify-content: center;
   width: 14px;
   height: 14px;
-  font-size: 10px;
-  color: #856404;
+  font-size: 11px;
+  color: #6d5300;
   cursor: help;
-  opacity: 0.7;
+  opacity: 1;
   transition: opacity 0.2s;
   position: relative;
+  font-weight: bold;
 }
 
 .metric-info-icon:hover {
