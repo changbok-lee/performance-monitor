@@ -1936,4 +1936,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('loginHistoryBtn');
     if (btn) btn.style.display = 'inline-block';
   }
+
+  // vercel.app에서는 측정 버튼 숨기기 (로컬 백엔드 필요)
+  if (window.location.hostname.includes('vercel.app')) {
+    const measureButtons = document.getElementById('measureButtons');
+    if (measureButtons) measureButtons.style.display = 'none';
+  }
 });
