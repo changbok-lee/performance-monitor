@@ -296,3 +296,90 @@ function formatDate(dateString) {
   const date = new Date(dateString);
   return date.toLocaleDateString('ko-KR');
 }
+
+// ==================== 권한 체크 및 버튼 활성화 ====================
+
+function checkEditPermission() {
+  const currentEmail = Auth.getEmail();
+  const hasPermission = currentEmail === 'changbok.lee@imweb.me';
+
+  // 비활성화할 버튼들
+  const editButtons = [
+    'btnValidate',
+    'btnClearPaste',
+    'btnSave',
+    'btnRefreshUrls',
+    'btnDeleteAll'
+  ];
+
+  editButtons.forEach(btnId => {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.disabled = !hasPermission;
+      if (!hasPermission) {
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.title = '편집 권한이 없습니다';
+      }
+    }
+  });
+
+  // textarea 비활성화
+  const pasteArea = document.getElementById('pasteArea');
+  if (pasteArea && !hasPermission) {
+    pasteArea.disabled = true;
+    pasteArea.style.opacity = '0.6';
+    pasteArea.placeholder = '편집 권한이 없습니다. 조회만 가능합니다.';
+  }
+
+  // 테이블의 삭제 버튼도 비활성화 (displayUrls에서 처리)
+  window.hasEditPermission = hasPermission;
+}
+
+// displayUrls 함수 오버라이드 - 삭제 버튼 권한 처리
+const originalDisplayUrls = displayUrls;
+displayUrls = function(urls) {
+  const tbody = document.getElementById('urlTableBody');
+
+  if (urls.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align:center;">
+          등록된 URL이 없습니다.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const hasPermission = window.hasEditPermission;
+
+  tbody.innerHTML = urls.map(url => `
+    <tr>
+      <td>${url.id}</td>
+      <td class="url-cell" title="${url.url}">
+        <a href="${url.url}" target="_blank">${truncateUrl(url.url)}</a>
+      </td>
+      <td>${url.site_name || '-'}</td>
+      <td>${url.page_detail || '-'}</td>
+      <td>
+        <span class="badge badge-${url.network.toLowerCase()}">
+          ${url.network === 'Mobile' ? '📱' : '💻'} ${url.network}
+        </span>
+      </td>
+      <td>${formatDate(url.created_at)}</td>
+      <td>
+        <button onclick="deleteUrl(${url.id})" class="btn-small btn-danger" ${!hasPermission ? 'disabled style="opacity:0.5;cursor:not-allowed;" title="편집 권한이 없습니다"' : ''}>
+          삭제
+        </button>
+      </td>
+    </tr>
+  `).join('');
+};
+
+// ==================== 페이지 초기화 ====================
+
+document.addEventListener('DOMContentLoaded', () => {
+  checkEditPermission();
+  loadUrls();
+});
