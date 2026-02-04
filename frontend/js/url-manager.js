@@ -3,9 +3,23 @@
 let parsedData = [];
 let allUrlData = [];
 
+// ==================== 권한 체크 함수 ====================
+
+function hasEditPermissionCheck() {
+  const currentEmail = Auth.getEmail();
+  if (currentEmail !== 'changbok.lee@imweb.me') {
+    alert('편집 권한이 없습니다.');
+    return false;
+  }
+  return true;
+}
+
 // ==================== 엑셀 데이터 파싱 ====================
 
 function parseExcelData() {
+  // 권한 체크
+  if (!hasEditPermissionCheck()) return;
+
   const textarea = document.getElementById('pasteArea');
   const text = textarea.value.trim();
 
@@ -90,6 +104,9 @@ function showValidationResult(successCount, errors) {
 // ==================== URL 저장 ====================
 
 async function saveUrls() {
+  // 권한 체크
+  if (!hasEditPermissionCheck()) return;
+
   if (parsedData.length === 0) {
     alert('저장할 데이터가 없습니다.');
     return;
@@ -232,6 +249,9 @@ function filterUrlList() {
 // ==================== URL 삭제 ====================
 
 async function deleteUrl(id) {
+  // 권한 체크
+  if (!hasEditPermissionCheck()) return;
+
   if (!confirm('이 URL을 삭제하시겠습니까?')) {
     return;
   }
@@ -257,6 +277,9 @@ async function deleteUrl(id) {
 // ==================== 전체 삭제 ====================
 
 async function deleteAllUrls() {
+  // 권한 체크
+  if (!hasEditPermissionCheck()) return;
+
   if (!confirm('⚠️ 모든 URL을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다!')) {
     return;
   }
