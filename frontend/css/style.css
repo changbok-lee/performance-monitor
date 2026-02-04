@@ -2860,3 +2860,70 @@ nav {
   opacity: 1;
   visibility: visible;
 }
+
+/* 섹션 타이틀 도움말 아이콘 */
+.section-info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 13px;
+  color: #6d5300;
+  cursor: help;
+  opacity: 1;
+  transition: opacity 0.2s;
+  position: relative;
+  font-weight: bold;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.section-info-icon:hover {
+  opacity: 1;
+}
+
+.section-info-icon::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2c3e50;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: normal;
+  white-space: normal;
+  width: 280px;
+  text-align: left;
+  line-height: 1.5;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  z-index: 1002;
+  pointer-events: none;
+  margin-bottom: 8px;
+}
+
+.section-info-icon::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #2c3e50;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  margin-bottom: -5px;
+  z-index: 1003;
+}
+
+.section-info-icon:hover::after,
+.section-info-icon:hover::before {
+  opacity: 1;
+  visibility: visible;
+}
