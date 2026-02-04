@@ -1714,21 +1714,27 @@ function renderPageComparison(measurements) {
   const container = document.getElementById('pageComparisonContainer');
   if (!container) return;
 
-  // 최근 1일 데이터만 필터링
+  // 최근 1일 데이터만 필터링 (한국 시간 기준)
   const validMeasurements = measurements.filter(m => m.measured_at);
   if (validMeasurements.length === 0) {
     container.innerHTML = '<div class="no-data-msg">데이터가 없습니다.</div>';
     return;
   }
 
-  // 가장 최근 측정일 찾기
-  const latestDate = new Date(Math.max(...validMeasurements.map(m => new Date(m.measured_at).getTime())));
-  const latestDateStr = latestDate.toISOString().split('T')[0]; // YYYY-MM-DD
+  // 한국 시간 기준 날짜 문자열 반환 함수
+  const getKoreaDateStr = (dateStr) => {
+    const date = new Date(dateStr);
+    const koreaDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+    return koreaDate.toISOString().split('T')[0]; // YYYY-MM-DD (KST)
+  };
+
+  // 가장 최근 측정일 찾기 (한국 시간 기준)
+  const latestTimestamp = Math.max(...validMeasurements.map(m => new Date(m.measured_at).getTime()));
+  const latestDateStr = getKoreaDateStr(new Date(latestTimestamp).toISOString());
 
   // 최근 1일 데이터만 필터링
   const recentMeasurements = validMeasurements.filter(m => {
-    const measureDate = new Date(m.measured_at).toISOString().split('T')[0];
-    return measureDate === latestDateStr;
+    return getKoreaDateStr(m.measured_at) === latestDateStr;
   });
 
   // 페이지상세 순서 정의 (홈 / 상품목록 / 상품상세)
