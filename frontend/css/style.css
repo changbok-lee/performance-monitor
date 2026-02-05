@@ -1664,7 +1664,7 @@ nav {
   border-left-color: #28a745;
   transition: all 0.2s;
   flex-wrap: wrap;
-  align-content: center;
+  align-content: flex-start;
 }
 
 .stat-item-button:hover {
@@ -1688,8 +1688,7 @@ nav {
   transition: opacity 0.2s;
   width: 100%;
   text-align: right;
-  margin-top: auto;
-  padding-top: 8px;
+  padding-top: 6px;
 }
 
 .stat-item-button:hover .stat-link {
