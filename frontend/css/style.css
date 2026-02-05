@@ -1664,7 +1664,7 @@ nav {
   border-left-color: #28a745;
   transition: all 0.2s;
   flex-wrap: wrap;
-  align-content: space-between;
+  align-content: center;
 }
 
 .stat-item-button:hover {
