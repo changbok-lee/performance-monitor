@@ -727,11 +727,11 @@ function displayMeasurements(measurements, network) {
     };
   });
   
-  // 최신 측정일시 순 정렬
+  // 측정일시 순 정렬 (오래된 순 → 최신 순, 최신이 아래)
   averaged.sort((a, b) => {
     const aDate = new Date(a.latest_measured_at);
     const bDate = new Date(b.latest_measured_at);
-    return bDate - aDate;
+    return aDate - bDate;
   });
   
   if (averaged.length === 0) {
