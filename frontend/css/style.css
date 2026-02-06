@@ -1653,7 +1653,7 @@ nav {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 15px;
+  padding: 12px 15px 28px 15px;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border-radius: 10px;
   border-left: 4px solid #667eea;
@@ -1664,7 +1664,6 @@ nav {
   border-left-color: #28a745;
   transition: all 0.2s;
   position: relative;
-  padding-bottom: 28px;
 }
 
 .stat-item-button:hover {
