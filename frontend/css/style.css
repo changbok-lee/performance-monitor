@@ -2213,6 +2213,11 @@ nav {
   overflow-y: auto;
 }
 
+/* 테이블 마지막 행 하단 여백 */
+.improvement-table tbody tr:last-child td {
+  padding-bottom: 20px;
+}
+
 .report-loading {
   text-align: center;
   padding: 60px 20px;
