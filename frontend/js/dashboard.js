@@ -1431,8 +1431,18 @@ function renderIssueRow(issue) {
 function formatSolution(solution) {
   if (!solution) return '';
 
+  // HTML 특수문자 이스케이프 (XSS 방지 및 HTML 구조 보호)
+  const escapeHtml = (str) => str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+  // 먼저 HTML 이스케이프 처리
+  let escaped = escapeHtml(solution);
+
   // 마크다운 간단 변환
-  return solution
+  return escaped
     .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/## (.+)/g, '<h2>$1</h2>')
