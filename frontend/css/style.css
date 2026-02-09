@@ -2291,6 +2291,44 @@ nav {
   color: #495057;
 }
 
+.rank-badge.out-of-rank {
+  background: #f8d7da;
+  color: #721c24;
+  width: auto;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75em;
+}
+
+/* 순위외 행 스타일 */
+.out-of-rank-row {
+  background-color: #fafafa;
+  opacity: 0.85;
+}
+
+.out-of-rank-row:hover {
+  opacity: 1;
+}
+
+/* 순위외 구분선 */
+.out-of-rank-separator td {
+  padding: 20px 0 10px 0 !important;
+  background: transparent !important;
+}
+
+.separator-line {
+  border-top: 2px dashed #dee2e6;
+  margin-bottom: 10px;
+}
+
+.separator-text {
+  display: block;
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
 /* 문제점 제목 */
 .issue-title {
   font-weight: 600;

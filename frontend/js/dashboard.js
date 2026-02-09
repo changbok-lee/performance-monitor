@@ -1304,7 +1304,7 @@ async function showImprovementReportModal() {
     if (dateRange && data.dateRange) {
       const start = new Date(data.dateRange.start);
       const end = new Date(data.dateRange.end);
-      dateRange.textContent = `${start.getMonth() + 1}/${start.getDate()} ~ ${end.getMonth() + 1}/${end.getDate()} (최근 10일)`;
+      dateRange.textContent = `${start.getMonth() + 1}/${start.getDate()} ~ ${end.getMonth() + 1}/${end.getDate()} (최근 20일)`;
     }
 
     // 데이터 없음
@@ -1312,12 +1312,15 @@ async function showImprovementReportModal() {
       body.innerHTML = `
         <div class="no-issues">
           <div class="no-issues-icon">📊</div>
-          <p>최근 10일간 수집된 개선사항이 없습니다.</p>
+          <p>최근 20일간 수집된 개선사항이 없습니다.</p>
           <p style="font-size: 0.9em; color: #aaa;">성능 측정을 실행하면 개선사항이 수집됩니다.</p>
         </div>
       `;
       return;
     }
+
+    // 순위외 항목이 있는지 확인
+    const hasOutOfRank = data.outOfRankIssues && data.outOfRankIssues.length > 0;
 
     // 테이블 생성
     body.innerHTML = `
@@ -1332,6 +1335,15 @@ async function showImprovementReportModal() {
         </thead>
         <tbody>
           ${data.issues.map(issue => renderIssueRow(issue)).join('')}
+          ${hasOutOfRank ? `
+            <tr class="out-of-rank-separator">
+              <td colspan="4">
+                <div class="separator-line"></div>
+                <span class="separator-text">📁 이전에 개선안을 생성했던 항목 (현재 순위권 외)</span>
+              </td>
+            </tr>
+            ${data.outOfRankIssues.map(issue => renderIssueRow(issue)).join('')}
+          ` : ''}
         </tbody>
       </table>
     `;
@@ -1349,8 +1361,12 @@ async function showImprovementReportModal() {
 }
 
 function renderIssueRow(issue) {
-  const isTop3 = issue.rank <= 3;
+  const isOutOfRank = issue.isOutOfRank === true;
+  const isTop3 = !isOutOfRank && issue.rank <= 3;
   const hasSolution = !!issue.solution;
+
+  // 순위외 항목용 고유 ID 생성
+  const rowId = isOutOfRank ? `out-${issue.title.replace(/[^a-zA-Z0-9가-힣]/g, '_').substring(0, 20)}` : issue.rank;
 
   // 개선제안 미리보기 (첫 100자)
   const solutionPreview = hasSolution
@@ -1358,35 +1374,41 @@ function renderIssueRow(issue) {
     : '';
 
   return `
-    <tr>
+    <tr class="${isOutOfRank ? 'out-of-rank-row' : ''}">
       <td style="text-align: center;">
-        <span class="rank-badge ${isTop3 ? 'top3' : 'normal'}">${issue.rank}</span>
+        <span class="rank-badge ${isTop3 ? 'top3' : ''} ${isOutOfRank ? 'out-of-rank' : 'normal'}">${issue.rank}</span>
       </td>
       <td class="issue-col">
         <div class="issue-title">${issue.title}</div>
-        <div class="issue-stats">
-          <span class="count">${issue.count}회 발생</span> ·
-          <span class="impact">총 ${issue.totalImpact}초 개선 가능</span>
-        </div>
+        ${isOutOfRank ? `
+          <div class="issue-stats" style="color: #888;">
+            <span>최근 20일간 발생 기록 없음</span>
+          </div>
+        ` : `
+          <div class="issue-stats">
+            <span class="count">${issue.count}회 발생</span> ·
+            <span class="impact">총 ${issue.totalImpact}초 개선 가능</span>
+          </div>
+        `}
       </td>
       <td>
         <div class="page-tags-vertical">
-          ${issue.pageDetails.length > 0
+          ${issue.pageDetails && issue.pageDetails.length > 0
             ? issue.pageDetails.map(p => `<span class="page-tag">${p}</span>`).join('')
             : '<span style="color:#888">-</span>'
           }
         </div>
       </td>
       <td class="solution-cell">
-        <div class="solution-content" id="solution-${issue.rank}">
+        <div class="solution-content" id="solution-${rowId}">
           ${hasSolution ? `
             <div class="solution-preview">${solutionPreview}</div>
-            <div class="solution-full" id="solution-full-${issue.rank}">${formatSolution(issue.solution)}</div>
+            <div class="solution-full" id="solution-full-${rowId}">${formatSolution(issue.solution)}</div>
             <div class="solution-buttons">
-              <button class="btn-expand" onclick="toggleSolution(${issue.rank})">
+              <button class="btn-expand" onclick="toggleSolution('${rowId}')">
                 📖 펼치기
               </button>
-              <button class="btn-regenerate" onclick="generateSolution(${issue.rank}, '${escapeForAttr(issue.title)}')">
+              <button class="btn-regenerate" onclick="generateSolution('${rowId}', '${escapeForAttr(issue.title)}')">
                 🔄 다시 답변받기
               </button>
               <button class="btn-history" onclick="showSuggestionHistory('${escapeForAttr(issue.title)}')">
@@ -1395,7 +1417,7 @@ function renderIssueRow(issue) {
             </div>
           ` : `
             <div class="solution-buttons">
-              <button class="btn-generate" onclick="generateSolution(${issue.rank}, '${escapeForAttr(issue.title)}')">
+              <button class="btn-generate" onclick="generateSolution('${rowId}', '${escapeForAttr(issue.title)}')">
                 ✨ AI 개선안 생성
               </button>
             </div>

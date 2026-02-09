@@ -374,9 +374,9 @@ app.delete('/api/measurements', authMiddleware, async (req, res) => {
 // 개선사항 Report 데이터 조회
 app.get('/api/improvement-report', authMiddleware, async (req, res) => {
   try {
-    // 최근 10일간의 측정 데이터 조회 (suggestions가 있는 것만)
+    // 최근 20일간의 측정 데이터 조회 (suggestions가 있는 것만)
     const since = new Date();
-    since.setDate(since.getDate() - 10);
+    since.setDate(since.getDate() - 20);
     const sinceStr = since.toISOString();
 
     const measurements = await supabaseRequest('measurements', {
@@ -436,8 +436,8 @@ app.get('/api/improvement-report', authMiddleware, async (req, res) => {
       return scoreB - scoreA;
     });
 
-    // TOP 20
-    const top20 = issueList.slice(0, 20);
+    // TOP 30 (더 많은 문제점 수집)
+    const top30 = issueList.slice(0, 30);
 
     // 캐시된 개선 제안 조회
     let cachedSuggestions = {};
@@ -454,7 +454,7 @@ app.get('/api/improvement-report', authMiddleware, async (req, res) => {
     }
 
     // 결과에 캐시된 개선 제안 추가
-    const result = top20.map((issue, index) => ({
+    const result = top30.map((issue, index) => ({
       rank: index + 1,
       title: issue.title,
       count: issue.count,
@@ -464,10 +464,25 @@ app.get('/api/improvement-report', authMiddleware, async (req, res) => {
       solution: cachedSuggestions[issue.title] || null
     }));
 
+    // 순위외 항목: 캐시된 개선안이 있지만 현재 TOP 30에 포함되지 않는 항목들
+    const top30Titles = new Set(top30.map(issue => issue.title));
+    const outOfRankIssues = Object.keys(cachedSuggestions)
+      .filter(title => !top30Titles.has(title))
+      .map(title => ({
+        rank: '순위외',
+        title: title,
+        count: 0,
+        totalImpact: '-',
+        avgImpact: '-',
+        pageDetails: [],
+        solution: cachedSuggestions[title],
+        isOutOfRank: true
+      }));
+
     // 날짜 범위 계산
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 10);
+    startDate.setDate(startDate.getDate() - 20);
 
     res.json({
       success: true,
@@ -476,7 +491,8 @@ app.get('/api/improvement-report', authMiddleware, async (req, res) => {
         end: endDate.toISOString().split('T')[0]
       },
       totalMeasurements: measurements.length,
-      issues: result
+      issues: result,
+      outOfRankIssues: outOfRankIssues
     });
 
   } catch (error) {
